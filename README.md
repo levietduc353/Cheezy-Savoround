@@ -1,2 +1,2 @@
 # Cheezy-Savoround
-![System Flow Diagram](Docs/Cheezy Savoround.drawio.png)
+![System Flow Diagram](Docs/CheezySavoround.drawio.png)
