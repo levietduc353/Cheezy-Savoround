@@ -7,7 +7,11 @@
       "cellSize": 4.0,
       "cellSpacing": 0.0,
       "orientation": "portrait",
-      "gridOriginOffset": { "x": 0.0, "y": 0.0, "z": 0.0 }
+      "gridOriginOffset": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      }
     },
     {
       "id": "hold_grid",
@@ -16,7 +20,11 @@
       "cellSize": 4.0,
       "cellSpacing": 0.0,
       "orientation": "landscape",
-      "gridOriginOffset": { "x": 0.0, "y": 0.0, "z": 0.0 }
+      "gridOriginOffset": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      }
     },
     {
       "id": "grid_plate",
@@ -25,12 +33,17 @@
       "cellSize": 0.0,
       "cellSpacing": 0.0,
       "orientation": "portrait",
-      "gridOriginOffset": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "gridOriginOffset": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
       "radius": 1.7,
       "spacing": 0.0,
       "circleSegments": 60,
       "sectorCount": 6,
-      "slotAnchorFraction": 0.0
+      "slotAnchorFraction": 0.0,
+      "sliceRotationOffsetY": -90.0
     }
   ]
 }

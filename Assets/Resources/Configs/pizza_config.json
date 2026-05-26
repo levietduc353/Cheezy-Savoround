@@ -1,0 +1,16 @@
+{
+  "pizzaTypes": [
+    { "id": "pizza_1", "displayName": "Pizza 1", "poolId": "pizza_1" },
+    { "id": "pizza_2", "displayName": "Pizza 2", "poolId": "pizza_2" },
+    { "id": "pizza_3", "displayName": "Pizza 3", "poolId": "pizza_3" },
+    { "id": "pizza_4", "displayName": "Pizza 4", "poolId": "pizza_4" },
+    { "id": "pizza_5", "displayName": "Pizza 5", "poolId": "pizza_5" },
+    { "id": "pizza_6", "displayName": "Pizza 6", "poolId": "pizza_6" }
+  ],
+  "spawnCountMin": 1,
+  "spawnCountMax": 6,
+  "maxSlicesPerPlate": 6,
+  "spawnCountWeights": [18, 22, 22, 20, 13, 5],
+  "minFillerSlicesWhenFull": 1,
+  "maxFillerSlicesWhenFull": 3
+}

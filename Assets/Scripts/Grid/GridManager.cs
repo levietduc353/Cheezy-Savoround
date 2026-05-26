@@ -11,6 +11,14 @@ using UnityEngine;
 ///   3. The grid draws itself in the Scene view immediately (Gizmos must be on).
 ///   4. Optionally assign a Cell Prefab to spawn real objects at runtime.
 /// </summary>
+/// <summary>Info about a neighboring grid cell, returned by GetNeighbors.</summary>
+public struct NeighborInfo
+{
+    public int             row;
+    public int             col;
+    public PlateController plate;
+}
+
 public class GridManager : MonoBehaviour
 {
     // ─── Inspector fields ────────────────────────────────────────────────────
@@ -30,9 +38,20 @@ public class GridManager : MonoBehaviour
     [SerializeField] private Color _gizmoLineColor   = new Color(0.2f, 0.8f, 1f, 0.8f);
     [SerializeField] private Color _gizmoCenterColor = new Color(1f, 0.6f, 0.1f, 0.9f);
 
+    // ─── Events (Observer Pattern) ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Fired when a plate is placed into a cell.
+    /// Subscribers (e.g. MergeChecker) use this to trigger merge logic.
+    /// </summary>
+    public event System.Action<int, int, PlateController> OnPlatePlaced;
+
     // ─── Private state ───────────────────────────────────────────────────────
 
     private GridConfigData _config;
+
+    /// <summary>2-D array tracking which PlateController occupies each cell.</summary>
+    private PlateController[,] _plates;
 
     // Cached values for runtime & Gizmo use.
     private int     _rows;
@@ -49,9 +68,19 @@ public class GridManager : MonoBehaviour
 
     // ─── Unity lifecycle ─────────────────────────────────────────────────────
 
+    // ─── Public read-only properties ──────────────────────────────────────────
+
+    public int   Rows     => _rows;
+    public int   Columns  => _columns;
+    public float CellSize => _cellSize;
+
+    // ─── Unity lifecycle ─────────────────────────────────────────────────────
+
     private void Awake()
     {
         LoadConfig();
+        // Initialize plate tracking array after _rows/_columns are set by LoadConfig.
+        _plates = new PlateController[_rows, _columns];
     }
 
     private void Start()
@@ -62,6 +91,78 @@ public class GridManager : MonoBehaviour
 
     // ─── Public API ───────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Places <paramref name="plate"/> into cell (<paramref name="row"/>, <paramref name="col"/>).
+    /// Fires <see cref="OnPlatePlaced"/> so MergeChecker can react.
+    /// </summary>
+    /// <returns>True on success; false if the cell is already occupied or out of bounds.</returns>
+    public bool PlacePlate(int row, int col, PlateController plate)
+    {
+        if (!IsValidCell(row, col))
+        {
+            Debug.LogWarning($"[GridManager] Cell ({row},{col}) is out of bounds.");
+            return false;
+        }
+
+        if (_plates[row, col] != null)
+        {
+            Debug.LogWarning($"[GridManager] Cell ({row},{col}) is already occupied.");
+            return false;
+        }
+
+        _plates[row, col] = plate;
+        plate.SetGridPosition(row, col);
+
+        OnPlatePlaced?.Invoke(row, col, plate);
+        return true;
+    }
+
+    /// <summary>Removes the plate reference from cell (<paramref name="row"/>, <paramref name="col"/>).</summary>
+    public void RemovePlate(int row, int col)
+    {
+        if (!IsValidCell(row, col)) return;
+
+        if (_plates[row, col] != null)
+            _plates[row, col].ClearGridPosition();
+
+        _plates[row, col] = null;
+    }
+
+    /// <summary>Returns the PlateController at cell (<paramref name="row"/>, <paramref name="col"/>), or null.</summary>
+    public PlateController GetPlateAt(int row, int col)
+    {
+        if (!IsValidCell(row, col)) return null;
+        return _plates[row, col];
+    }
+
+    /// <summary>
+    /// Returns the four orthogonal neighbors of cell (<paramref name="row"/>, <paramref name="col"/>)
+    /// that are currently occupied by a plate.
+    /// </summary>
+    public System.Collections.Generic.List<NeighborInfo> GetNeighbors(int row, int col)
+    {
+        var result = new System.Collections.Generic.List<NeighborInfo>();
+
+        // Offsets for Up, Down, Left, Right in the grid.
+        int[] dr = { -1,  1,  0,  0 };
+        int[] dc = {  0,  0, -1,  1 };
+
+        for (int i = 0; i < 4; i++)
+        {
+            int nr = row + dr[i];
+            int nc = col + dc[i];
+
+            if (!IsValidCell(nr, nc)) continue;
+
+            PlateController neighbor = _plates[nr, nc];
+            if (neighbor == null) continue;
+
+            result.Add(new NeighborInfo { row = nr, col = nc, plate = neighbor });
+        }
+
+        return result;
+    }
+
     /// <summary>Returns the world-space center of the cell at (row, col).</summary>
     public Vector3 GetCellWorldPosition(int row, int col)
     {
@@ -69,7 +170,14 @@ public class GridManager : MonoBehaviour
                                  _isPortrait, transform.position + _originOffset);
     }
 
+
+
     // ─── Private helpers ──────────────────────────────────────────────────────
+
+    private bool IsValidCell(int row, int col)
+    {
+        return row >= 0 && row < _rows && col >= 0 && col < _columns;
+    }
 
     /// <summary>
     /// Core position math, shared by GetCellWorldPosition and OnDrawGizmos.

@@ -99,6 +99,11 @@ public class CircleGridDrawer : MonoBehaviour
     private int   _circleSegments;
     private int   _sectorCount;
     private float _slotAnchorFraction;
+    /// <summary>
+    /// Extra Y rotation (degrees) baked into each slot's worldRotation to
+    /// compensate for the slice model's local forward axis not being Z+.
+    /// </summary>
+    private float _sliceRotationOffsetY;
 
     /// <summary>Flat list of every slot in the grid, built once in Awake.</summary>
     private List<CircleSlot> _slots = new List<CircleSlot>();
@@ -136,7 +141,11 @@ public class CircleGridDrawer : MonoBehaviour
         }
 
         slot.occupant = obj;
+
+        // Parent the pizza slice to this drawer's transform so it moves with the plate.
+        obj.transform.SetParent(transform);
         obj.transform.position = slot.worldPosition;
+        obj.transform.rotation = slot.worldRotation; // apply sector rotation + model offset
 
         OnSlotOccupied?.Invoke(slot);
         return true;
@@ -196,6 +205,18 @@ public class CircleGridDrawer : MonoBehaviour
         return slot?.worldPosition ?? Vector3.zero;
     }
 
+    /// <summary>
+    /// Number of equal sectors each circle is divided into.
+    /// Used by PlateController to know how many pizza slots are available.
+    /// </summary>
+    public int SectorCount => _sectorCount;
+
+    /// <summary>
+    /// Recalculates all slot world positions based on the current transform.position.
+    /// Call this after repositioning the plate (e.g. before spawning pizza slices).
+    /// </summary>
+    public void RebuildSlots() => BuildSlots();
+
     // ─── Private helpers ──────────────────────────────────────────────────────
 
     /// <summary>
@@ -233,13 +254,14 @@ public class CircleGridDrawer : MonoBehaviour
         }
 
         // Apply values from config.
-        _rows               = _config.rows;
-        _columns            = _config.columns;
-        _radius             = _config.radius;
-        _spacing            = _config.spacing;
-        _circleSegments     = _config.circleSegments > 0 ? _config.circleSegments : 60;
-        _sectorCount        = _config.sectorCount > 0    ? _config.sectorCount    : 6;
-        _slotAnchorFraction = _config.slotAnchorFraction;
+        _rows                 = _config.rows;
+        _columns              = _config.columns;
+        _radius               = _config.radius;
+        _spacing              = _config.spacing;
+        _circleSegments       = _config.circleSegments > 0 ? _config.circleSegments : 60;
+        _sectorCount          = _config.sectorCount > 0    ? _config.sectorCount    : 6;
+        _slotAnchorFraction   = _config.slotAnchorFraction;
+        _sliceRotationOffsetY = _config.sliceRotationOffsetY;
 
         Debug.Log($"[CircleGridDrawer] Loaded '{_gridId}': {_rows}×{_columns} circles, " +
                   $"radius={_radius}, sectors={_sectorCount}");
@@ -248,13 +270,14 @@ public class CircleGridDrawer : MonoBehaviour
     /// <summary>Fallback values used when config cannot be loaded.</summary>
     private void ApplyFallback()
     {
-        _rows               = 1;
-        _columns            = 1;
-        _radius             = 1.7f;
-        _spacing            = 0f;
-        _circleSegments     = 60;
-        _sectorCount        = 6;
-        _slotAnchorFraction = 0f;
+        _rows                 = 1;
+        _columns              = 1;
+        _radius               = 1.7f;
+        _spacing              = 0f;
+        _circleSegments       = 60;
+        _sectorCount          = 6;
+        _slotAnchorFraction   = 0f;
+        _sliceRotationOffsetY = 0f;
     }
 
     /// <summary>
@@ -294,8 +317,10 @@ public class CircleGridDrawer : MonoBehaviour
                     // Hướng từ tâm ra ngoài theo góc sector (XZ plane).
                     Vector3 outwardDir = new Vector3(Mathf.Cos(midAngleRad), 0f, Mathf.Sin(midAngleRad));
 
-                    // Xoay object sao cho Forward (Z+) của nó hướng ra ngoài.
-                    Quaternion outwardRot = Quaternion.LookRotation(outwardDir, Vector3.up);
+                    // Xoay object: Z+ hướng ra ngoài, sau đó apply offset để bù model orientation.
+                    // Ví dụ: nếu model chỉ về X+ thay vì Z+, dùng sliceRotationOffsetY = -90.
+                    Quaternion outwardRot = Quaternion.LookRotation(outwardDir, Vector3.up)
+                                           * Quaternion.Euler(0f, _sliceRotationOffsetY, 0f);
 
                     _slots.Add(new CircleSlot(row, col, s, anchorPos, outwardRot));
                 }

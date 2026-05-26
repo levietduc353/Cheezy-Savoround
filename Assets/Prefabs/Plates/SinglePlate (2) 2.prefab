@@ -116,7 +116,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: c4c7af6b348edc3468f2015507595739, type: 2}
     - target: {fileID: 919132149155446097, guid: 4a9c1757bb4d30a43922d56f0645f240, type: 3}
       propertyPath: m_Name
-      value: SinglePlate (2)
+      value: SinglePlate (2) 2
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

@@ -38,6 +38,12 @@ public class GridConfigData
     public int sectorCount;
     /// <summary>Radial fraction at which the slot anchor sits (0 = center, 1 = edge).</summary>
     public float slotAnchorFraction;
+
+    /// <summary>
+    /// Extra Y-axis rotation (degrees) applied to each slice to compensate for model orientation.
+    /// Use -90 if the model's forward direction is X+ instead of Z+.
+    /// </summary>
+    public float sliceRotationOffsetY;
 }
 
 /// <summary>

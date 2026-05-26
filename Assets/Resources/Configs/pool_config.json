@@ -1,0 +1,16 @@
+{
+  "pools": [
+    { "id": "pizza_1",  "prefabPath": "Prefabs/Pizza/Pizza 1",      "initialSize": 12, "maxSize": 24 },
+    { "id": "pizza_2",  "prefabPath": "Prefabs/Pizza/Pizza 2",      "initialSize": 12, "maxSize": 24 },
+    { "id": "pizza_3",  "prefabPath": "Prefabs/Pizza/Pizza 3",      "initialSize": 12, "maxSize": 24 },
+    { "id": "pizza_4",  "prefabPath": "Prefabs/Pizza/Pizza 4",      "initialSize": 12, "maxSize": 24 },
+    { "id": "pizza_5",  "prefabPath": "Prefabs/Pizza/Pizza 5",      "initialSize": 12, "maxSize": 24 },
+    { "id": "pizza_6",  "prefabPath": "Prefabs/Pizza/Pizza 6",      "initialSize": 12, "maxSize": 24 },
+    { "id": "plate_0",  "prefabPath": "Prefabs/Plates/SinglePlate",  "initialSize": 4,  "maxSize": 8  },
+    { "id": "plate_1",  "prefabPath": "Prefabs/Plates/SinglePlate1", "initialSize": 4,  "maxSize": 8  },
+    { "id": "plate_2",  "prefabPath": "Prefabs/Plates/SinglePlate2", "initialSize": 4,  "maxSize": 8  },
+    { "id": "plate_3",  "prefabPath": "Prefabs/Plates/SinglePlate3", "initialSize": 4,  "maxSize": 8  },
+    { "id": "plate_4",  "prefabPath": "Prefabs/Plates/SinglePlate4", "initialSize": 4,  "maxSize": 8  },
+    { "id": "plate_5",  "prefabPath": "Prefabs/Plates/SinglePlate5", "initialSize": 4,  "maxSize": 8  }
+  ]
+}
