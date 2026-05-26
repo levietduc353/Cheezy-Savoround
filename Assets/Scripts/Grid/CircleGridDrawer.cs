@@ -25,7 +25,6 @@ public class CircleSlot
 
     /// <summary>
     /// Rotation sao cho trục Z (Forward) của object hướng từ tâm ra phía ngoài của sector.
-    /// Giống như một miếng pizza hướng ra ngoài đĩa.
     /// </summary>
     public Quaternion worldRotation;
 
@@ -50,12 +49,13 @@ public class CircleSlot
 
 /// <summary>
 /// Draws a grid of circles in the Scene view via Gizmos.
-/// Each circle is divided into <see cref="_sectorCount"/> equal sector-slots.
-/// Slots can hold any GameObject via <see cref="PlaceObject"/> / <see cref="RemoveObject"/>.
+/// All parameters are loaded from grid_config.json (Resources/Configs/grid_config)
+/// using the assigned Grid Id — no hardcoded values in the Inspector.
 ///
 /// Usage:
 ///   1. Attach this component to an empty GameObject.
-///   2. Tune the Inspector fields (rows, columns, radius, sector count …).
+///   2. Set "Grid Id" in the Inspector to match an entry in grid_config.json
+///      (e.g. "grid_plate").
 ///   3. Enable Gizmos in the Scene view to see the grid.
 ///   4. Subscribe to <see cref="OnSlotOccupied"/> / <see cref="OnSlotVacated"/>
 ///      for slot-change notifications.
@@ -72,29 +72,12 @@ public class CircleGridDrawer : MonoBehaviour
 
     // ─── Inspector fields ─────────────────────────────────────────────────────
 
-    [Header("Grid Settings")]
-    [Tooltip("Number of rows in the grid.")]
-    [SerializeField] private int _rows = 3;
+    [Header("Config")]
+    [Tooltip("Path inside Resources/ folder (no extension).")]
+    [SerializeField] private string _configPath = "Configs/grid_config";
 
-    [Tooltip("Number of columns in the grid.")]
-    [SerializeField] private int _columns = 4;
-
-    [Tooltip("Radius of each circle.")]
-    [SerializeField] private float _radius = 1f;
-
-    [Tooltip("Gap between circles (edge-to-edge distance).")]
-    [SerializeField] private float _spacing = 0.3f;
-
-    [Header("Circle & Slot Settings")]
-    [Tooltip("Number of segments used to approximate the circle outline.")]
-    [SerializeField] private int _circleSegments = 60;
-
-    [Tooltip("Number of equal sectors (slots) each circle is divided into.")]
-    [SerializeField] private int _sectorCount = 6;
-
-    [Tooltip("Radial fraction at which the slot anchor sits inside the circle (0 = center, 1 = edge).")]
-    [Range(0f, 1f)]
-    [SerializeField] private float _slotAnchorFraction = 0f;
+    [Tooltip("Which grid entry to load from the config file (must match 'id' field in JSON).")]
+    [SerializeField] private string _gridId = "grid_plate";
 
     [Header("Gizmo Colors")]
     [SerializeField] private Color _circleColor  = new Color(0.2f, 0.8f, 1f,  0.85f);
@@ -103,107 +86,29 @@ public class CircleGridDrawer : MonoBehaviour
     [SerializeField] private Color _occupiedSlot = new Color(1f,   0.2f, 0.2f, 0.9f);
     [SerializeField] private Color _centerColor  = new Color(1f,   1f,   1f,   0.9f);
 
-    [Header("Test Objects")]
-    [Tooltip("Kéo thả Prefabs vào đây. Nhấn chuột phải vào component → Place Test Objects để spawn vào scene.")]
-    [SerializeField] private List<GameObject> _testPrefabs = new List<GameObject>();
-
     // ─── Private state ────────────────────────────────────────────────────────
+
+    /// <summary>Config loaded from JSON for this grid id.</summary>
+    private GridConfigData _config;
+
+    // Cached values read from config, used by BuildSlots and Gizmos.
+    private int   _rows;
+    private int   _columns;
+    private float _radius;
+    private float _spacing;
+    private int   _circleSegments;
+    private int   _sectorCount;
+    private float _slotAnchorFraction;
 
     /// <summary>Flat list of every slot in the grid, built once in Awake.</summary>
     private List<CircleSlot> _slots = new List<CircleSlot>();
-
-    /// <summary>Tracks GameObjects spawned by PlaceTestObjects so they can be destroyed on Clear.</summary>
-    private readonly List<GameObject> _spawnedTestObjects = new List<GameObject>();
 
     // ─── Unity lifecycle ──────────────────────────────────────────────────────
 
     private void Awake()
     {
+        LoadConfig();
         BuildSlots();
-    }
-
-    private void Start()
-    {
-        // Tự động spawn prefabs vào slots khi bắt đầu Play mode (nếu có).
-        if (_testPrefabs != null && _testPrefabs.Count > 0)
-            PlaceTestObjects();
-    }
-
-    // ─── Test Helpers ─────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Instantiate lần lượt từng prefab trong <see cref="_testPrefabs"/> vào các slot trống
-    /// theo thứ tự từ trên-trái xuống dưới-phải.
-    /// Nếu số prefab ít hơn số slot, prefab sẽ được dùng vòng lại (wrap-around).
-    /// Có thể gọi từ ContextMenu (chuột phải vào component trong Inspector).
-    /// </summary>
-    [ContextMenu("Place Test Objects")]
-    public void PlaceTestObjects()
-    {
-        if (_testPrefabs == null || _testPrefabs.Count == 0)
-        {
-            Debug.LogWarning("[CircleGridDrawer] _testPrefabs rỗng. Hãy kéo Prefabs vào list trước.");
-            return;
-        }
-
-        // Đảm bảo slots đã được build (cần thiết khi gọi từ editor).
-        if (_slots.Count == 0) BuildSlots();
-
-        int placed = 0;
-        int prefabCount = _testPrefabs.Count;
-
-        foreach (CircleSlot slot in _slots)
-        {
-            if (slot.IsOccupied) continue;
-
-            // Wrap-around: nếu hết prefab thì quay lại từ đầu.
-            GameObject prefab = _testPrefabs[placed % prefabCount];
-            if (prefab == null) { placed++; continue; }
-
-            // Spawn prefab tại vị trí slot anchor, xoay theo hướng ra ngoài của sector.
-            GameObject instance = Instantiate(prefab, slot.worldPosition, slot.worldRotation, transform);
-            instance.name = $"{prefab.name}_r{slot.circleRow}c{slot.circleCol}s{slot.sectorIndex}";
-
-            slot.occupant = instance;
-            _spawnedTestObjects.Add(instance);
-            OnSlotOccupied?.Invoke(slot);
-            placed++;
-
-            Debug.Log($"[CircleGridDrawer] Spawn '{instance.name}' tại slot " +
-                      $"(row={slot.circleRow}, col={slot.circleCol}, sector={slot.sectorIndex})");
-        }
-
-        Debug.Log($"[CircleGridDrawer] Đã spawn {placed} object(s) vào {_slots.Count} slot(s).");
-    }
-
-    /// <summary>
-    /// Destroy tất cả các instance đã được spawn bởi <see cref="PlaceTestObjects"/>
-    /// và giải phóng toàn bộ slots.
-    /// Có thể gọi từ ContextMenu.
-    /// </summary>
-    [ContextMenu("Clear Test Objects")]
-    public void ClearTestObjects()
-    {
-        // Destroy tất cả instance đã spawn.
-        foreach (GameObject obj in _spawnedTestObjects)
-        {
-            if (obj != null) Destroy(obj);
-        }
-        _spawnedTestObjects.Clear();
-
-        // Giải phóng slots.
-        int cleared = 0;
-        foreach (CircleSlot slot in _slots)
-        {
-            if (slot.IsOccupied)
-            {
-                OnSlotVacated?.Invoke(slot);
-                slot.occupant = null;
-                cleared++;
-            }
-        }
-
-        Debug.Log($"[CircleGridDrawer] Đã xóa và Destroy {cleared} instance(s).");
     }
 
     // ─── Public API ───────────────────────────────────────────────────────────
@@ -294,14 +199,73 @@ public class CircleGridDrawer : MonoBehaviour
     // ─── Private helpers ──────────────────────────────────────────────────────
 
     /// <summary>
-    /// Builds the flat <see cref="_slots"/> list from the current Inspector settings.
+    /// Loads this component's config entry from the shared JSON file by matching _gridId.
+    /// Applies fallback defaults if the config cannot be found or parsed.
+    /// </summary>
+    private void LoadConfig()
+    {
+        TextAsset jsonAsset = Resources.Load<TextAsset>(_configPath);
+
+        if (jsonAsset == null)
+        {
+            Debug.LogError($"[CircleGridDrawer:{_gridId}] Config file not found at " +
+                           $"Resources/{_configPath}.json. Using fallback values.");
+            ApplyFallback();
+            return;
+        }
+
+        GridConfigCollection collection = JsonUtility.FromJson<GridConfigCollection>(jsonAsset.text);
+
+        if (collection == null || collection.grids == null)
+        {
+            Debug.LogError($"[CircleGridDrawer:{_gridId}] Failed to parse GridConfigCollection.");
+            ApplyFallback();
+            return;
+        }
+
+        _config = System.Array.Find(collection.grids, g => g.id == _gridId);
+
+        if (_config == null)
+        {
+            Debug.LogError($"[CircleGridDrawer] No grid entry with id='{_gridId}' found in config.");
+            ApplyFallback();
+            return;
+        }
+
+        // Apply values from config.
+        _rows               = _config.rows;
+        _columns            = _config.columns;
+        _radius             = _config.radius;
+        _spacing            = _config.spacing;
+        _circleSegments     = _config.circleSegments > 0 ? _config.circleSegments : 60;
+        _sectorCount        = _config.sectorCount > 0    ? _config.sectorCount    : 6;
+        _slotAnchorFraction = _config.slotAnchorFraction;
+
+        Debug.Log($"[CircleGridDrawer] Loaded '{_gridId}': {_rows}×{_columns} circles, " +
+                  $"radius={_radius}, sectors={_sectorCount}");
+    }
+
+    /// <summary>Fallback values used when config cannot be loaded.</summary>
+    private void ApplyFallback()
+    {
+        _rows               = 1;
+        _columns            = 1;
+        _radius             = 1.7f;
+        _spacing            = 0f;
+        _circleSegments     = 60;
+        _sectorCount        = 6;
+        _slotAnchorFraction = 0f;
+    }
+
+    /// <summary>
+    /// Builds the flat <see cref="_slots"/> list from the current config values.
     /// Called once in Awake and re-called in the Editor Gizmo path when not playing.
     /// </summary>
     private void BuildSlots()
     {
         _slots.Clear();
 
-        float step = _radius * 2f + _spacing;
+        float step       = _radius * 2f + _spacing;
         float totalWidth = _columns * step - _spacing;
         float totalDepth = _rows    * step - _spacing;
 
@@ -353,11 +317,15 @@ public class CircleGridDrawer : MonoBehaviour
 #if UNITY_EDITOR
     private void OnDrawGizmos()
     {
-        // Rebuild geometry in edit mode so the Gizmo reflects live Inspector changes.
+        // Trong Edit mode: load config trực tiếp từ AssetDatabase để Gizmo phản ánh JSON.
+        if (!Application.isPlaying)
+            LoadConfigEditor();
+
+        // Rebuild geometry mỗi frame trong Edit mode để phản ánh thay đổi JSON live.
         if (!Application.isPlaying)
             BuildSlots();
 
-        float step = _radius * 2f + _spacing;
+        float step       = _radius * 2f + _spacing;
         float totalWidth = _columns * step - _spacing;
         float totalDepth = _rows    * step - _spacing;
 
@@ -376,6 +344,36 @@ public class CircleGridDrawer : MonoBehaviour
                 DrawCenterDot(center, _radius);
             }
         }
+    }
+
+    /// <summary>
+    /// Loads config via AssetDatabase (editor-safe, no Play required).
+    /// Mirrors LoadConfig() but uses AssetDatabase path instead of Resources.Load.
+    /// </summary>
+    private void LoadConfigEditor()
+    {
+        TextAsset jsonAsset = UnityEditor.AssetDatabase.LoadAssetAtPath<TextAsset>(
+            $"Assets/Resources/{_configPath}.json");
+
+        if (jsonAsset == null)
+        {
+            ApplyFallback();
+            return;
+        }
+
+        GridConfigCollection collection = JsonUtility.FromJson<GridConfigCollection>(jsonAsset.text);
+        if (collection?.grids == null) { ApplyFallback(); return; }
+
+        GridConfigData cfg = System.Array.Find(collection.grids, g => g.id == _gridId);
+        if (cfg == null) { ApplyFallback(); return; }
+
+        _rows               = cfg.rows;
+        _columns            = cfg.columns;
+        _radius             = cfg.radius;
+        _spacing            = cfg.spacing;
+        _circleSegments     = cfg.circleSegments > 0 ? cfg.circleSegments : 60;
+        _sectorCount        = cfg.sectorCount > 0    ? cfg.sectorCount    : 6;
+        _slotAnchorFraction = cfg.slotAnchorFraction;
     }
 
     /// <summary>

@@ -26,6 +26,18 @@ public class GridConfigData
     /// <summary>"portrait" or "landscape"</summary>
     public string orientation;
     public Vector3Data gridOriginOffset;
+
+    // ─── Circle grid fields (used by CircleGridDrawer) ───────────────────────
+    /// <summary>Radius of each circle. Only used when this config drives a CircleGridDrawer.</summary>
+    public float radius;
+    /// <summary>Edge-to-edge gap between circles.</summary>
+    public float spacing;
+    /// <summary>Number of segments used to approximate the circle outline.</summary>
+    public int circleSegments;
+    /// <summary>Number of equal sectors each circle is divided into.</summary>
+    public int sectorCount;
+    /// <summary>Radial fraction at which the slot anchor sits (0 = center, 1 = edge).</summary>
+    public float slotAnchorFraction;
 }
 
 /// <summary>
