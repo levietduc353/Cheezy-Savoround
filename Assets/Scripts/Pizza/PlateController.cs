@@ -41,6 +41,7 @@ public class PlateController : MonoBehaviour
     public string PizzaTypeId => _pizzaTypeId;
     public string PoolId      => _poolId;
     public int    SliceCount  => _sliceCount;
+    public int    MaxSlices   => _maxSlices;
     public bool   IsEmpty     => _sliceCount <= 0;
     public bool   IsFull      => _sliceCount >= _maxSlices;
     public int    GridRow     => _gridRow;
@@ -89,9 +90,10 @@ public class PlateController : MonoBehaviour
             return;
         }
 
-        // Rebuild slot positions based on the plate's CURRENT world position.
-        // Must be called after the plate has been positioned (done by HoldGridManager).
-        _drawer.RebuildSlots();
+        // Fully reset the drawer — clears all slot occupants so the plate starts clean.
+        // Must use RebuildAndClearSlots (not RebuildSlots) here; the plate is freshly
+        // retrieved from the pool and must not carry over stale occupant references.
+        _drawer.RebuildAndClearSlots();
 
         SpawnSlices(mainSliceCount, fillerPoolIds);
     }
@@ -194,6 +196,88 @@ public class PlateController : MonoBehaviour
         ReleaseAllSlices();
         ClearGridPosition();
         PoolManager.Instance.Release(_poolId, gameObject);
+    }
+
+    // ─── Slice-type query helpers ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns true if this plate holds at least one slice of <paramref name="typeId"/>.
+    /// Used by MergeChecker to detect mixed-merge candidates.
+    /// </summary>
+    public bool HasSlicesOfType(string typeId)
+    {
+        foreach (CircleSlot slot in _drawer.GetOccupiedSlots())
+        {
+            PizzaSlice slice = slot.occupant != null
+                ? slot.occupant.GetComponent<PizzaSlice>() : null;
+            if (slice != null && slice.PizzaTypeId == typeId) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Returns the count of slices whose <see cref="PizzaSlice.PizzaTypeId"/> equals
+    /// <paramref name="typeId"/>. Used by MergeChecker to compute mixed-merge amounts.
+    /// </summary>
+    public int CountSlicesOfType(string typeId)
+    {
+        int count = 0;
+        foreach (CircleSlot slot in _drawer.GetOccupiedSlots())
+        {
+            PizzaSlice slice = slot.occupant != null
+                ? slot.occupant.GetComponent<PizzaSlice>() : null;
+            if (slice != null && slice.PizzaTypeId == typeId) count++;
+        }
+        return count;
+    }
+
+    /// <summary>
+    /// Transfers up to <paramref name="maxAmount"/> slices whose
+    /// <see cref="PizzaSlice.PizzaTypeId"/> equals <paramref name="typeId"/>
+    /// from this plate to <paramref name="receiver"/>.
+    /// Non-matching slices are left untouched.
+    /// Fires <see cref="OnPlateEmpty"/> if this plate drops to 0 total slices.
+    /// </summary>
+    /// <returns>Actual number of slices transferred.</returns>
+    public int TransferSlicesOfType(PlateController receiver, string typeId, int maxAmount)
+    {
+        if (receiver == null || receiver.IsFull || maxAmount <= 0) return 0;
+
+        // Build a snapshot of matching slots only to avoid mutating the collection mid-loop.
+        var matchingSlots = new System.Collections.Generic.List<CircleSlot>();
+        foreach (CircleSlot slot in _drawer.GetOccupiedSlots())
+        {
+            PizzaSlice slice = slot.occupant != null
+                ? slot.occupant.GetComponent<PizzaSlice>() : null;
+            if (slice != null && slice.PizzaTypeId == typeId)
+                matchingSlots.Add(slot);
+        }
+
+        int transferred = 0;
+        foreach (CircleSlot slot in matchingSlots)
+        {
+            if (transferred >= maxAmount || receiver.IsFull) break;
+
+            GameObject go = _drawer.RemoveObject(slot.circleRow, slot.circleCol, slot.sectorIndex);
+            if (go == null) continue;
+
+            _sliceCount--;
+
+            if (receiver.ReceiveSlice(go))
+            {
+                transferred++;
+            }
+            else
+            {
+                // Safety: receiver rejected the slice — put it back.
+                _drawer.PlaceObject(slot.circleRow, slot.circleCol, slot.sectorIndex, go);
+                _sliceCount++;
+                break;
+            }
+        }
+
+        if (IsEmpty) OnPlateEmpty?.Invoke(this);
+        return transferred;
     }
 
     // ─── Private helpers ──────────────────────────────────────────────────────

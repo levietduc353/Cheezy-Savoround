@@ -212,10 +212,53 @@ public class CircleGridDrawer : MonoBehaviour
     public int SectorCount => _sectorCount;
 
     /// <summary>
-    /// Recalculates all slot world positions based on the current transform.position.
-    /// Call this after repositioning the plate (e.g. before spawning pizza slices).
+    /// Recalculates all slot world positions/rotations based on the current transform.position.
+    /// Preserves existing occupant references — safe to call while slices are on the plate.
+    /// Use this when the plate has been repositioned but already holds slices (e.g. in ReceiveSlice).
     /// </summary>
-    public void RebuildSlots() => BuildSlots();
+    public void RebuildSlots()
+    {
+        // If slots have not been initialised yet, fall back to a full build.
+        if (_slots.Count == 0)
+        {
+            BuildSlots();
+            return;
+        }
+
+        // --- Only refresh positions/rotations. DO NOT clear occupant references. ---
+        // Clearing _slots here was the root-cause bug: every ReceiveSlice call wiped
+        // the receiver plate's occupancy data, causing all received slices to be placed
+        // at sector 0 and existing slices to become untracked ghost objects.
+
+        float   step        = _radius * 2f + _spacing;
+        float   totalWidth  = _columns * step - _spacing;
+        float   totalDepth  = _rows    * step - _spacing;
+        Vector3 origin      = transform.position
+                              - new Vector3(totalWidth * 0.5f - _radius, 0f, totalDepth * 0.5f - _radius);
+        float   angleSector = 360f / _sectorCount;
+
+        foreach (CircleSlot slot in _slots)
+        {
+            Vector3 center    = origin + new Vector3(slot.circleCol * step, 0f, slot.circleRow * step);
+            float midAngleRad = (slot.sectorIndex + 0.5f) * angleSector * Mathf.Deg2Rad;
+
+            slot.worldPosition = center + new Vector3(
+                Mathf.Cos(midAngleRad) * _radius * _slotAnchorFraction,
+                0f,
+                Mathf.Sin(midAngleRad) * _radius * _slotAnchorFraction);
+
+            Vector3 outwardDir = new Vector3(Mathf.Cos(midAngleRad), 0f, Mathf.Sin(midAngleRad));
+            slot.worldRotation = Quaternion.LookRotation(outwardDir, Vector3.up)
+                               * Quaternion.Euler(0f, _sliceRotationOffsetY, 0f);
+        }
+    }
+
+    /// <summary>
+    /// Fully rebuilds all slots from scratch, clearing all occupant references.
+    /// Call this only when initialising a plate freshly retrieved from the pool
+    /// (PlateController.Initialize), where a clean slate is required.
+    /// </summary>
+    public void RebuildAndClearSlots() => BuildSlots();
 
     // ─── Private helpers ──────────────────────────────────────────────────────
 
