@@ -38,14 +38,14 @@ public class PlateController : MonoBehaviour
 
     // ─── Public properties ────────────────────────────────────────────────────
 
-    public string PizzaTypeId => _pizzaTypeId;
-    public string PoolId      => _poolId;
-    public int    SliceCount  => _sliceCount;
-    public int    MaxSlices   => _maxSlices;
-    public bool   IsEmpty     => _sliceCount <= 0;
-    public bool   IsFull      => _sliceCount >= _maxSlices;
-    public int    GridRow     => _gridRow;
-    public int    GridCol     => _gridCol;
+    public string  PizzaTypeId  => _pizzaTypeId;
+    public string  PoolId       => _poolId;
+    public int     SliceCount   => _sliceCount;
+    public int     MaxSlices    => _maxSlices;
+    public bool    IsEmpty      => _sliceCount <= 0;
+    public bool    IsFull       => _sliceCount >= _maxSlices;
+    public int     GridRow      => _gridRow;
+    public int     GridCol      => _gridCol;
 
     // ─── Unity lifecycle ──────────────────────────────────────────────────────
 
@@ -197,6 +197,81 @@ public class PlateController : MonoBehaviour
         ClearGridPosition();
         PoolManager.Instance.Release(_poolId, gameObject);
     }
+
+    // ─── Animation-support API (used by MergeAnimator) ──────────────────────────
+
+    /// <summary>
+    /// Extracts up to <paramref name="maxAmount"/> slices of <paramref name="typeId"/>
+    /// from this plate for animation.
+    /// Each extracted slice is removed from the CircleGridDrawer, its _sliceCount is
+    /// decremented, and it is un-parented so MergeAnimator can move it freely.
+    /// Does NOT fire OnPlateEmpty — the caller (MergeAnimator) is responsible for
+    /// checking IsEmpty and triggering dismiss + pool return.
+    /// </summary>
+    /// <returns>List of (GameObject, world-space position at time of extraction).</returns>
+    public List<(GameObject go, Vector3 worldPos)> ExtractSlicesOfType(
+        string typeId, int maxAmount)
+    {
+        var result = new List<(GameObject go, Vector3 worldPos)>();
+
+        // Build a snapshot of matching occupied slots.
+        var matchingSlots = new List<CircleSlot>();
+        foreach (CircleSlot slot in _drawer.GetOccupiedSlots())
+        {
+            if (matchingSlots.Count >= maxAmount) break;
+            PizzaSlice slice = slot.occupant != null
+                ? slot.occupant.GetComponent<PizzaSlice>() : null;
+            if (slice != null && slice.PizzaTypeId == typeId)
+                matchingSlots.Add(slot);
+        }
+
+        foreach (CircleSlot slot in matchingSlots)
+        {
+            if (result.Count >= maxAmount) break;
+
+            // Remove the slice from the drawer first, then read its ACTUAL world
+            // position from go.transform.position.
+            // DO NOT use slot.worldPosition here — it is stale (set when the plate
+            // was last in the hold grid) and does not reflect the plate's current
+            // position on the main grid after dragging.
+            GameObject go = _drawer.RemoveObject(
+                slot.circleRow, slot.circleCol, slot.sectorIndex);
+            if (go == null) continue;
+
+            _sliceCount--;
+            Vector3 fromPos = go.transform.position; // correct world position post-drag
+            go.transform.SetParent(null);             // free-floating for animation
+            result.Add((go, fromPos));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Returns the world-space positions of the next <paramref name="count"/> empty
+    /// slots WITHOUT modifying any state.
+    /// Used by MergeAnimator to know where slices will land before they start flying,
+    /// so the flight paths can be aimed correctly.
+    /// </summary>
+    public List<Vector3> PeekEmptySlotPositions(int count)
+    {
+        // Rebuild so positions reflect the plate's current world location.
+        _drawer.RebuildSlots();
+
+        var emptySlots = _drawer.GetEmptySlots();
+        var result     = new List<Vector3>();
+        int take       = Mathf.Min(count, emptySlots.Count);
+        for (int i = 0; i < take; i++)
+            result.Add(emptySlots[i].worldPosition);
+        return result;
+    }
+
+    /// <summary>
+    /// Accepts one animated slice into this plate after its travel coroutine ends.
+    /// Delegates to <see cref="ReceiveSlice"/>, which handles slot-finding,
+    /// re-parenting, _sliceCount increment, and OnPlateFull.
+    /// </summary>
+    public bool AcceptAnimatedSlice(GameObject go) => ReceiveSlice(go);
 
     // ─── Slice-type query helpers ─────────────────────────────────────────────
 

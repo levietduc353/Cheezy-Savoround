@@ -89,7 +89,12 @@ public class DragController : MonoBehaviour
     /// <summary>Detects a hold-grid plate under the press and begins dragging.</summary>
     private void HandlePress(Vector2 screenPos)
     {
+        // Block new drag input while merge animations are running to prevent
+        // race conditions between concurrent animation coroutines.
+        if (MergeAnimator.Instance != null && MergeAnimator.Instance.IsMergeAnimating) return;
+
         Ray ray = _camera.ScreenPointToRay(screenPos);
+
         if (!Physics.Raycast(ray, out RaycastHit hit, 200f, _draggableLayerMask)) return;
 
         PlateController plate = hit.collider.GetComponentInParent<PlateController>();
