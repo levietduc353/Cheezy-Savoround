@@ -50,6 +50,14 @@ public class MergeAnimator : MonoBehaviour
     [Tooltip("Duration of the shrink-to-zero phase after the punch.")]
     [SerializeField] private float _dismissShrinkDuration = 0.25f;
 
+    // ─── Events (Observer Pattern) ────────────────────────────────────────────
+
+    /// <summary>
+    /// Fired each time a receiver plate fills up completely and is dismissed.
+    /// Static so ScoreManager can subscribe without holding a direct reference.
+    /// </summary>
+    public static event System.Action OnPlateCompleted;
+
     // ─── Public state ─────────────────────────────────────────────────────────
 
     /// <summary>
@@ -188,10 +196,14 @@ public class MergeAnimator : MonoBehaviour
         // ── 5. Dismiss completed plates ───────────────────────────────────────
         fsm?.ChangeState(fsm.Clearing);
 
-        // Receiver became full → remove from grid, then animate dismiss.
+        // Receiver became full → remove from grid, notify score system, then animate dismiss.
         if (op.receiver.IsFull)
         {
             mainGrid.RemovePlate(op.receiverRow, op.receiverCol);
+
+            // Notify ScoreManager (and any other subscribers) that a plate was completed.
+            OnPlateCompleted?.Invoke();
+
             bool done = false;
             StartCoroutine(PlateDismissCoroutine(op.receiver, () =>
             {

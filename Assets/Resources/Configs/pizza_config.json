@@ -10,7 +10,7 @@
   "spawnCountMin": 1,
   "spawnCountMax": 6,
   "maxSlicesPerPlate": 6,
-  "spawnCountWeights": [18, 22, 22, 20, 13, 5],
+  "spawnCountWeights": [50, 25, 13, 7, 3, 2],
   "minFillerSlicesWhenFull": 1,
   "maxFillerSlicesWhenFull": 3
 }
