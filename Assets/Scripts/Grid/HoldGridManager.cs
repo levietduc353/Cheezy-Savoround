@@ -108,6 +108,28 @@ public class HoldGridManager : MonoBehaviour
         return _holdGrid.GetCellWorldPosition(0, slotIndex);
     }
 
+    /// <summary>
+    /// Registers an externally-created plate into the given hold slot so that
+    /// DragController can pick it up normally.
+    ///
+    /// Use this from test scripts or other systems that need to inject a plate
+    /// directly into the hold grid without going through the normal refill flow.
+    /// The slot's previous plate reference (if any) is overwritten — caller must
+    /// ensure the slot is empty first via GetPlateAtSlot().
+    /// </summary>
+    public void RegisterPlateAtSlot(int slotIndex, PlateController plate)
+    {
+        if (slotIndex < 0 || slotIndex >= _holdSlotCount)
+        {
+            Debug.LogError($"[HoldGridManager] RegisterPlateAtSlot: " +
+                           $"slot index {slotIndex} is out of range (0–{_holdSlotCount - 1}).");
+            return;
+        }
+
+        _plates[slotIndex] = plate;
+        Debug.Log($"[HoldGridManager] External plate registered at hold slot {slotIndex}.");
+    }
+
     // ─── Private helpers ──────────────────────────────────────────────────────
 
     /// <summary>Spawns 4 new random plates across all hold slots.</summary>

@@ -105,6 +105,26 @@ public class MergeAnimator : MonoBehaviour
         StartCoroutine(MergeSequenceCoroutine(operations, mainGrid, fsm));
     }
 
+    /// <summary>
+    /// Plays the standard dismiss animation on <paramref name="plate"/> and returns it
+    /// to the pool, WITHOUT firing <see cref="OnPlateCompleted"/>.
+    /// Used by RemovePowerUp to silently discard a plate with no score awarded.
+    ///
+    /// Sequence:
+    ///   1. Remove plate from the grid (frees the cell immediately).
+    ///   2. FSM → ClearingState while the animation runs.
+    ///   3. Punch-then-shrink dismiss animation (same as merge dismiss).
+    ///   4. plate.ReturnToPool().
+    ///   5. FSM → PlayingState.
+    /// </summary>
+    public void RemovePlateWithAnimation(
+        PlateController  plate,
+        GridManager      mainGrid,
+        GameStateMachine fsm)
+    {
+        StartCoroutine(RemovePlateCoroutine(plate, mainGrid, fsm));
+    }
+
     // ─── Private coroutines ───────────────────────────────────────────────────
 
     /// <summary>Runs each MergeOperation in sequence, guarded by IsMergeAnimating.</summary>
@@ -141,6 +161,37 @@ public class MergeAnimator : MonoBehaviour
         IsMergeAnimating = false;
         fsm?.ChangeState(fsm.Playing);
         Debug.Log("[MergeAnimator] Merge sequence complete → Playing.");
+    }
+
+    /// <summary>
+    /// Backing coroutine for <see cref="RemovePlateWithAnimation"/>.
+    /// Removes the plate from the grid, plays the dismiss animation, returns the plate
+    /// to the pool, then restores the FSM to Playing.
+    /// OnPlateCompleted is intentionally NOT fired here.
+    /// </summary>
+    private IEnumerator RemovePlateCoroutine(
+        PlateController  plate,
+        GridManager      mainGrid,
+        GameStateMachine fsm)
+    {
+        IsMergeAnimating = true;
+        fsm?.ChangeState(fsm.Clearing);
+
+        // Free the grid cell immediately so other logic can use it right away.
+        mainGrid.RemovePlate(plate.GridRow, plate.GridCol);
+
+        // Play the same punch-then-shrink dismiss animation used for completed plates.
+        bool done = false;
+        StartCoroutine(PlateDismissCoroutine(plate, () =>
+        {
+            plate.ReturnToPool();
+            done = true;
+        }));
+        yield return new WaitUntil(() => done);
+
+        IsMergeAnimating = false;
+        fsm?.ChangeState(fsm.Playing);
+        Debug.Log("[MergeAnimator] RemovePlate dismiss complete → Playing.");
     }
 
     /// <summary>

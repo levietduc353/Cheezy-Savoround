@@ -306,6 +306,158 @@ public class PlateController : MonoBehaviour
         return count;
     }
 
+    // ─── Unify helpers (used by UnifyPowerUp) ────────────────────────────────
+
+    /// <summary>
+    /// Returns true if this plate holds slices of more than one distinct pizza type.
+    /// Used by UnifyPowerUp to validate the selection before processing.
+    /// </summary>
+    public bool HasMultipleSliceTypes()
+    {
+        string firstType = null;
+        foreach (CircleSlot slot in _drawer.GetOccupiedSlots())
+        {
+            PizzaSlice slice = slot.occupant != null
+                ? slot.occupant.GetComponent<PizzaSlice>() : null;
+            if (slice == null) continue;
+
+            if (firstType == null) { firstType = slice.PizzaTypeId; continue; }
+            if (slice.PizzaTypeId != firstType) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Returns the pizza type ID that appears most often on this plate.
+    /// On tie the first type encountered in slot order wins (stable tiebreak).
+    /// Returns null if the plate has no slices.
+    /// </summary>
+    public string GetDominantSliceType()
+    {
+        // Ordered list preserves first-found ordering for stable tie-breaking.
+        var orderedTypes = new List<string>();
+        var counts       = new Dictionary<string, int>();
+
+        foreach (CircleSlot slot in _drawer.GetOccupiedSlots())
+        {
+            PizzaSlice slice = slot.occupant != null
+                ? slot.occupant.GetComponent<PizzaSlice>() : null;
+            if (slice == null) continue;
+
+            string typeId = slice.PizzaTypeId;
+            if (!counts.ContainsKey(typeId))
+            {
+                counts[typeId] = 0;
+                orderedTypes.Add(typeId); // track encounter order
+            }
+            counts[typeId]++;
+        }
+
+        if (orderedTypes.Count == 0) return null;
+
+        // Find the type with the highest count.
+        // orderedTypes[0] is used as the initial winner → first-found wins on tie.
+        string dominant = orderedTypes[0];
+        int    maxCount = counts[dominant];
+
+        foreach (string typeId in orderedTypes)
+        {
+            if (counts[typeId] > maxCount)
+            {
+                maxCount = counts[typeId];
+                dominant = typeId;
+            }
+        }
+
+        return dominant;
+    }
+
+    /// <summary>
+    /// Converts every slice whose type differs from <paramref name="targetTypeId"/> into
+    /// a new slice of that type. Each minority slice is returned to its original pool and
+    /// replaced with a fresh slice from the target pool in the same sector slot.
+    /// Also updates <see cref="PizzaTypeId"/> to <paramref name="targetTypeId"/>.
+    ///
+    /// <para>
+    /// _sliceCount is unchanged for each successful 1-for-1 swap.
+    /// It is decremented only when a pool Get() or PlaceObject() fails (slot left empty).
+    /// </para>
+    /// </summary>
+    /// <returns>Number of slices actually converted.</returns>
+    public int UnifySlicesToType(string targetTypeId)
+    {
+        if (_drawer == null || string.IsNullOrEmpty(targetTypeId)) return 0;
+
+        // ── CRITICAL: Rebuild slot world positions before any PlaceObject call ────
+        // slot.worldPosition is computed once in BuildSlots() based on the plate's
+        // transform at that moment. If the plate has since moved (e.g. from hold grid
+        // → main grid), the stored positions are stale. RebuildSlots() refreshes them
+        // without clearing occupant references — safe to call mid-play.
+        _drawer.RebuildSlots();
+
+        // Snapshot minority slots before mutating to avoid modifying the collection mid-loop.
+        var toConvert = new List<CircleSlot>();
+        foreach (CircleSlot slot in _drawer.GetOccupiedSlots())
+        {
+            PizzaSlice slice = slot.occupant != null
+                ? slot.occupant.GetComponent<PizzaSlice>() : null;
+            if (slice != null && slice.PizzaTypeId != targetTypeId)
+                toConvert.Add(slot);
+        }
+
+        int converted = 0;
+
+        foreach (CircleSlot slot in toConvert)
+        {
+            // ── Step 1: Remove old (minority) slice from the drawer ───────────
+            GameObject oldGo = _drawer.RemoveObject(slot.circleRow, slot.circleCol, slot.sectorIndex);
+            if (oldGo == null) continue;
+
+            // Return the old slice to its correct pool (no _sliceCount change yet —
+            // we are about to put a replacement in the same slot).
+            PizzaSlice oldSlice = oldGo.GetComponent<PizzaSlice>();
+            if (oldSlice != null)
+                oldSlice.ReturnToPool();
+            else
+                Destroy(oldGo); // Fallback: shouldn't happen in normal play.
+
+            // ── Step 2: Get a new slice of the target type ────────────────────
+            // In this game typeId == poolId (pizza_1 → pool "pizza_1").
+            GameObject newGo = PoolManager.Instance.Get(targetTypeId);
+            if (newGo == null)
+            {
+                // Pool exhausted — slot stays empty; decrement count to reflect reality.
+                _sliceCount--;
+                Debug.LogWarning($"[PlateController] UnifySlicesToType: pool '{targetTypeId}' " +
+                                 "is exhausted. Slot left empty.");
+                continue;
+            }
+
+            // ── Step 3: Initialize and place ─────────────────────────────────
+            newGo.GetComponent<PizzaSlice>()?.Initialize(targetTypeId, targetTypeId);
+
+            bool placed = _drawer.PlaceObject(slot.circleRow, slot.circleCol, slot.sectorIndex, newGo);
+            if (placed)
+            {
+                converted++;
+                // _sliceCount unchanged (removed 1, added 1 in the same slot).
+            }
+            else
+            {
+                // Slot unavailable (shouldn't happen since we just vacated it).
+                PoolManager.Instance.Release(targetTypeId, newGo);
+                _sliceCount--;
+                Debug.LogWarning($"[PlateController] UnifySlicesToType: PlaceObject failed " +
+                                 $"for slot ({slot.circleRow},{slot.circleCol},{slot.sectorIndex}).");
+            }
+        }
+
+        // Update the plate's main pizza type to match the unified slices.
+        _pizzaTypeId = targetTypeId;
+
+        return converted;
+    }
+
     /// <summary>
     /// Transfers up to <paramref name="maxAmount"/> slices whose
     /// <see cref="PizzaSlice.PizzaTypeId"/> equals <paramref name="typeId"/>
