@@ -9,9 +9,10 @@ using UnityEngine;
 ///   - When fill reaches 1 (currentScore >= threshold):
 ///       • currentScore resets to 0
 ///       • threshold = Mathf.RoundToInt(threshold * 1.5f)
+///       • _currentLevel increments by 1
 ///
 /// Subscribes to MergeAnimator.OnPlateCompleted (Observer Pattern).
-/// Broadcasts OnFillChanged(float) for ScoreUI to consume.
+/// Broadcasts OnFillChanged(float) and OnLevelChanged(int) for ScoreUI to consume.
 /// All parameters loaded from Resources/Configs/score_config.json.
 /// </summary>
 public class ScoreManager : MonoBehaviour
@@ -40,15 +41,37 @@ public class ScoreManager : MonoBehaviour
     /// </summary>
     public event System.Action<int> OnBarCompleted;
 
+    /// <summary>
+    /// Fired each time the player levels up (fill bar completed).
+    /// Argument: the new current level (1-based).
+    /// </summary>
+    public event System.Action<int> OnLevelChanged;
+
+    /// <summary>
+    /// Fired every time a plate is completed (total cumulative count).
+    /// Argument: the new total plates completed count.
+    /// </summary>
+    public event System.Action<int> OnTotalScoreChanged;
+
     // ─── Private state ────────────────────────────────────────────────────────
 
     private int _currentScore;
     private int _currentThreshold;
+    private int _currentLevel;
+
+    /// <summary>Tổng số plate đã hoàn thành từ đầu game — không bao giờ reset.</summary>
+    private int _totalPlatesCompleted;
 
     // ─── Public properties ────────────────────────────────────────────────────
 
     public int   CurrentScore     => _currentScore;
     public int   CurrentThreshold => _currentThreshold;
+
+    /// <summary>Current level (starts at 1, increments each time the fill bar completes).</summary>
+    public int   CurrentLevel     => _currentLevel;
+
+    /// <summary>Total plates completed since the game started — never resets mid-session.</summary>
+    public int   TotalPlatesCompleted => _totalPlatesCompleted;
 
     /// <summary>Normalized fill amount in [0, 1].</summary>
     public float FillAmount => _currentThreshold > 0
@@ -85,6 +108,10 @@ public class ScoreManager : MonoBehaviour
     {
         _currentScore++;
 
+        // Accumulate total — never resets; used for Game Over score display.
+        _totalPlatesCompleted++;
+        OnTotalScoreChanged?.Invoke(_totalPlatesCompleted);
+
         // Check if fill bar is complete.
         if (_currentScore >= _currentThreshold)
         {
@@ -93,13 +120,17 @@ public class ScoreManager : MonoBehaviour
             // Increase threshold by 1.5× for the next cycle.
             _currentThreshold = Mathf.RoundToInt(_currentThreshold * 1.5f);
 
+            // Increment level and notify subscribers (e.g. ScoreUI's TMP labels).
+            _currentLevel++;
+            OnLevelChanged?.Invoke(_currentLevel);
+
             OnBarCompleted?.Invoke(_currentThreshold);
-            Debug.Log($"[ScoreManager] Bar complete! New threshold: {_currentThreshold}");
+            Debug.Log($"[ScoreManager] Bar complete! Level: {_currentLevel}, New threshold: {_currentThreshold}");
         }
 
         float fill = FillAmount;
         OnFillChanged?.Invoke(fill);
-        Debug.Log($"[ScoreManager] Score: {_currentScore}/{_currentThreshold} (fill={fill:P0})");
+        Debug.Log($"[ScoreManager] Score: {_currentScore}/{_currentThreshold} | Total: {_totalPlatesCompleted} (fill={fill:P0})");
     }
 
     /// <summary>Reads score_config.json and initialises threshold.</summary>
@@ -126,6 +157,7 @@ public class ScoreManager : MonoBehaviour
 
         _currentThreshold = config.initialScoreThreshold;
         _currentScore     = 0;
+        _currentLevel     = 1;  // Level bắt đầu từ 1.
 
         Debug.Log($"[ScoreManager] Loaded. Initial threshold: {_currentThreshold}");
     }

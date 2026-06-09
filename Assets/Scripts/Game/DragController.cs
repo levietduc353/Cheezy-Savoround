@@ -93,11 +93,13 @@ public class DragController : MonoBehaviour
         // race conditions between concurrent animation coroutines.
         if (MergeAnimator.Instance != null && MergeAnimator.Instance.IsMergeAnimating) return;
 
-        // Block drag input while any power-up is in the middle of plate selection.
+        // Block drag input while any power-up is in the middle of plate selection,
+        // or while the game is in Game Over state.
         if (_fsm != null && (_fsm.CurrentState == _fsm.SwapSelecting   ||
                              _fsm.CurrentState == _fsm.FillSelecting   ||
                              _fsm.CurrentState == _fsm.RemoveSelecting ||
-                             _fsm.CurrentState == _fsm.UnifySelecting)) return;
+                             _fsm.CurrentState == _fsm.UnifySelecting  ||
+                             _fsm.CurrentState == _fsm.GameOver)) return;
 
         Ray ray = _camera.ScreenPointToRay(screenPos);
 

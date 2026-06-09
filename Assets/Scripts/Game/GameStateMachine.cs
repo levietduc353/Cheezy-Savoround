@@ -14,6 +14,7 @@ using UnityEngine;
 ///   FillSelectingState  — fill power-up active; player picks 1 plate to spawn its complement
 ///   RemoveSelectingState — remove power-up active; player picks 1 plate to discard silently
 ///   UnifySelectingState  — unify power-up active; player picks 1 mixed plate to normalise
+///   GameOverState        — main grid is full; all gameplay input blocked
 /// </summary>
 public class GameStateMachine : MonoBehaviour
 {
@@ -32,6 +33,7 @@ public class GameStateMachine : MonoBehaviour
     public FillSelectingState   FillSelecting   { get; private set; }
     public RemoveSelectingState RemoveSelecting { get; private set; }
     public UnifySelectingState  UnifySelecting  { get; private set; }
+    public GameOverState        GameOver        { get; private set; }
 
     // ─── Runtime state ────────────────────────────────────────────────────────
 
@@ -55,6 +57,7 @@ public class GameStateMachine : MonoBehaviour
         FillSelecting   = new FillSelectingState(this);
         RemoveSelecting = new RemoveSelectingState(this);
         UnifySelecting  = new UnifySelectingState(this);
+        GameOver        = new GameOverState(this);
     }
 
     private void Start()
@@ -202,4 +205,19 @@ public class UnifySelectingState : IGameState
     public void Enter()   { /* UnifyPowerUp highlights button, enables plate click detection */ }
     public void Execute() { }
     public void Exit()    { /* UnifyPowerUp clears highlight on cancel or completion */ }
+}
+
+/// <summary>
+/// Game Over — the main grid is completely full and no more plates can be placed.
+/// All gameplay input (drag, power-ups) is blocked.
+/// GameOverManager handles showing the Game Over canvas while the FSM is in this state.
+/// </summary>
+public class GameOverState : IGameState
+{
+    private readonly GameStateMachine _fsm;
+    public GameOverState(GameStateMachine fsm) => _fsm = fsm;
+
+    public void Enter()   { /* GameOverManager shows the canvas */ }
+    public void Execute() { }
+    public void Exit()    { /* Called on restart/scene reload — no cleanup needed here */ }
 }
