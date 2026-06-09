@@ -1,0 +1,9 @@
+{
+  "coin": 500,
+  "powerUpQuantities": {
+    "sausage": 3,
+    "cutter": 3,
+    "trashCan": 3,
+    "swap": 3
+  }
+}

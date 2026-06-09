@@ -1,0 +1,41 @@
+using System;
+
+/// <summary>
+/// Dữ liệu lưu trữ của người chơi — được serialize/deserialize sang JSON.
+///
+/// Bao gồm:
+///   - coin                : số coin player sở hữu.
+///   - powerUpQuantities   : số lượng từng loại power-up còn lại.
+///
+/// Lớp này là pure data (không kế thừa MonoBehaviour).
+/// PlayerDataManager chịu trách nhiệm load/save instance này.
+/// </summary>
+[Serializable]
+public class PlayerData
+{
+    /// <summary>Số coin hiện tại của player.</summary>
+    public int coin;
+
+    /// <summary>Số lượng từng loại power-up player đang sở hữu.</summary>
+    public PowerUpQuantities powerUpQuantities = new PowerUpQuantities();
+}
+
+/// <summary>
+/// Số lượng tồn kho của từng power-up.
+/// Tên field khớp chính xác với key trong player_data_default.json.
+/// </summary>
+[Serializable]
+public class PowerUpQuantities
+{
+    /// <summary>Power-up Sausage (Fill) — sinh ra đĩa bổ sung để lấp đầy.</summary>
+    public int sausage;
+
+    /// <summary>Power-up Cutter (Unify) — thống nhất toàn bộ slice thành 1 loại pizza.</summary>
+    public int cutter;
+
+    /// <summary>Power-up TrashCan (Remove) — xoá 1 đĩa khỏi main grid.</summary>
+    public int trashCan;
+
+    /// <summary>Power-up Swap — hoán đổi vị trí 2 đĩa trên main grid.</summary>
+    public int swap;
+}

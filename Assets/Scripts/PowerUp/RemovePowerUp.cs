@@ -96,6 +96,14 @@ public class RemovePowerUp : MonoBehaviour
         if (MergeAnimator.Instance != null && MergeAnimator.Instance.IsMergeAnimating) return;
         if (_fsm == null || _fsm.CurrentState != _fsm.Playing) return;
 
+        // Guard: không đủ lượt sử dụng.
+        if (PlayerDataManager.Instance == null ||
+            PlayerDataManager.Instance.GetPowerUpQty("trashCan") <= 0)
+        {
+            Debug.Log("[RemovePowerUp] Không còn TrashCan power-up.");
+            return;
+        }
+
         _fsm.ChangeState(_fsm.RemoveSelecting);
         SetButtonHighlight(true);
 
@@ -147,6 +155,9 @@ public class RemovePowerUp : MonoBehaviour
         // Deactivate power-up first so the FSM is clean when MergeAnimator takes over.
         SetButtonHighlight(false);
         _fsm.ChangeState(_fsm.Playing);
+
+        // Trừ 1 lượt sử dụng khi remove thành công.
+        PlayerDataManager.Instance?.UsePowerUp("trashCan");
 
         // Delegate to MergeAnimator — reuses the dismiss animation without scoring.
         MergeAnimator.Instance.RemovePlateWithAnimation(plate, _mainGrid, _fsm);

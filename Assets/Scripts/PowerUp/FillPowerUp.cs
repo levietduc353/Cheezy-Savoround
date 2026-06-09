@@ -103,6 +103,14 @@ public class FillPowerUp : MonoBehaviour
         if (MergeAnimator.Instance != null && MergeAnimator.Instance.IsMergeAnimating) return;
         if (_fsm == null || _fsm.CurrentState != _fsm.Playing) return;
 
+        // Guard: không đủ lượt sử dụng.
+        if (PlayerDataManager.Instance == null ||
+            PlayerDataManager.Instance.GetPowerUpQty("cutter") <= 0)
+        {
+            Debug.Log("[FillPowerUp] Không còn Cutter power-up.");
+            return;
+        }
+
         _fsm.ChangeState(_fsm.FillSelecting);
         SetButtonHighlight(true);
 
@@ -217,6 +225,9 @@ public class FillPowerUp : MonoBehaviour
             newPlate.ReturnToPool();
             return;
         }
+
+        // Trừ 1 lượt sử dụng sau khi thực sự đặt thành công.
+        PlayerDataManager.Instance?.UsePowerUp("cutter");
 
         Debug.Log($"[FillPowerUp] Fill plate spawned at ({emptyRow},{emptyCol}) — " +
                   $"{sliceCount}× '{targetPlate.PizzaTypeId}' → merge triggered.");

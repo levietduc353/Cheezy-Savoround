@@ -102,6 +102,14 @@ public class UnifyPowerUp : MonoBehaviour
         if (MergeAnimator.Instance != null && MergeAnimator.Instance.IsMergeAnimating) return;
         if (_fsm == null || _fsm.CurrentState != _fsm.Playing) return;
 
+        // Guard: không đủ lượt sử dụng.
+        if (PlayerDataManager.Instance == null ||
+            PlayerDataManager.Instance.GetPowerUpQty("sausage") <= 0)
+        {
+            Debug.Log("[UnifyPowerUp] Không còn Sausage power-up.");
+            return;
+        }
+
         _fsm.ChangeState(_fsm.UnifySelecting);
         SetButtonHighlight(true);
 
@@ -160,13 +168,16 @@ public class UnifyPowerUp : MonoBehaviour
             return;
         }
 
-        // ── Convert minority slices ───────────────────────────────────────────
+        // ── Convert minority slices ───────────────────────────────────────────────────
         int converted = plate.UnifySlicesToType(dominantType);
 
         Debug.Log($"[UnifyPowerUp] Plate at ({plate.GridRow},{plate.GridCol}) unified to " +
                   $"'{dominantType}' — {converted} slice(s) converted.");
 
-        // ── Deactivate power-up ───────────────────────────────────────────────
+        // Trừ 1 lượt sử dụng sau khi convert thành công.
+        PlayerDataManager.Instance?.UsePowerUp("sausage");
+
+        // ── Deactivate power-up ───────────────────────────────────────────────────────────────────
         SetButtonHighlight(false);
         _fsm.ChangeState(_fsm.Playing);
     }

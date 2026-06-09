@@ -103,7 +103,7 @@ public class SwapPowerUp : MonoBehaviour
     /// </summary>
     public void OnSwapButtonClicked()
     {
-        // ── If already in swap mode → cancel ─────────────────────────────────
+        // ── If already in swap mode → cancel ─────────────────────────────────────────
         if (_fsm != null && _fsm.CurrentState == _fsm.SwapSelecting)
         {
             CancelSwap();
@@ -114,7 +114,15 @@ public class SwapPowerUp : MonoBehaviour
         if (MergeAnimator.Instance != null && MergeAnimator.Instance.IsMergeAnimating) return;
         if (_fsm == null || _fsm.CurrentState != _fsm.Playing) return;
 
-        // ── Enter swap-selecting mode ─────────────────────────────────────────
+        // ── Guard: không đủ lượt sử dụng ───────────────────────────────────────────
+        if (PlayerDataManager.Instance == null ||
+            PlayerDataManager.Instance.GetPowerUpQty("swap") <= 0)
+        {
+            Debug.Log("[SwapPowerUp] Không còn Swap power-up.");
+            return;
+        }
+
+        // ── Enter swap-selecting mode ─────────────────────────────────────────────
         _fsm.ChangeState(_fsm.SwapSelecting);
         SetButtonHighlight(true);
 
@@ -240,9 +248,12 @@ public class SwapPowerUp : MonoBehaviour
 
         Debug.Log($"[SwapPowerUp] Swap complete: ({rowA},{colA}) ↔ ({rowB},{colB}).");
 
-        // ── Step 6: Cleanup ───────────────────────────────────────────────────
+        // ── Step 6: Cleanup ─────────────────────────────────────────────────────────────
         _firstPlate  = null;
         _isAnimating = false;
+
+        // Trừ 1 lượt sử dụng sau khi swap thành công.
+        PlayerDataManager.Instance?.UsePowerUp("swap");
 
         SetButtonHighlight(false);
 
