@@ -1,6 +1,10 @@
 {
-  "coin": 500,
+  "coin": 0,
   "highestScore": 0,
+  "dailyReward": {
+    "lastClaimDate": "",
+    "lastClaimedDay": 0
+  },
   "powerUpQuantities": {
     "sausage": 3,
     "cutter": 3,

@@ -72,6 +72,12 @@ public class PlayerDataManager : MonoBehaviour
     public int TrashCanQty => _data.powerUpQuantities.trashCan;
     public int SwapQty     => _data.powerUpQuantities.swap;
 
+    /// <summary>
+    /// Tham chiếu trực tiếp đến DailyRewardSaveData trong _data.
+    /// DailyRewardManager đọc/ghi vào object này rồi gọi Save() để persist.
+    /// </summary>
+    public DailyRewardSaveData DailyReward => _data.dailyReward;
+
     // ─── Unity lifecycle ──────────────────────────────────────────────────────
 
     private void Awake()

@@ -1,0 +1,46 @@
+{
+  "days": [
+    {
+      "day": 1,
+      "coin": 100,
+      "powerUpId": "",
+      "powerUpAmount": 0
+    },
+    {
+      "day": 2,
+      "coin": 0,
+      "powerUpId": "sausage",
+      "powerUpAmount": 1
+    },
+    {
+      "day": 3,
+      "coin": 150,
+      "powerUpId": "",
+      "powerUpAmount": 0
+    },
+    {
+      "day": 4,
+      "coin": 0,
+      "powerUpId": "trashCan",
+      "powerUpAmount": 1
+    },
+    {
+      "day": 5,
+      "coin": 200,
+      "powerUpId": "",
+      "powerUpAmount": 0
+    },
+    {
+      "day": 6,
+      "coin": 100,
+      "powerUpId": "",
+      "powerUpAmount": 0
+    },
+    {
+      "day": 7,
+      "coin": 100,
+      "powerUpId": "sausage",
+      "powerUpAmount": 2
+    }
+  ]
+}
