@@ -1,5 +1,6 @@
 {
   "coin": 500,
+  "highestScore": 0,
   "powerUpQuantities": {
     "sausage": 3,
     "cutter": 3,

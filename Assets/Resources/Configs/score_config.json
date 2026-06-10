@@ -1,3 +1,5 @@
 {
-  "initialScoreThreshold": 3
+  "initialScoreThreshold": 3,
+  "coinRewardEveryLevels": 3,
+  "coinRewardAmount": 20
 }

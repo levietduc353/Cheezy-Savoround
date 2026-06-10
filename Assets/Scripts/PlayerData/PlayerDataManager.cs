@@ -37,6 +37,12 @@ public class PlayerDataManager : MonoBehaviour
     public event System.Action<int>    OnCoinChanged;
 
     /// <summary>
+    /// Fired khi highest score được cập nhật (vượt qua kỷ lục cũ).
+    /// Argument: giá trị highest score mới.
+    /// </summary>
+    public event System.Action<int> OnHighestScoreChanged;
+
+    /// <summary>
     /// Fired mỗi khi số lượng 1 power-up thay đổi.
     /// Argument 1: id power-up ("sausage" | "cutter" | "trashCan" | "swap").
     /// Argument 2: số lượng mới.
@@ -58,6 +64,9 @@ public class PlayerDataManager : MonoBehaviour
 
     public int Coin     => _data.coin;
 
+    /// <summary>Điểm cao nhất từ trước đến nay (không bao giờ giảm).</summary>
+    public int HighestScore => _data.highestScore;
+
     public int SausageQty  => _data.powerUpQuantities.sausage;
     public int CutterQty   => _data.powerUpQuantities.cutter;
     public int TrashCanQty => _data.powerUpQuantities.trashCan;
@@ -74,7 +83,25 @@ public class PlayerDataManager : MonoBehaviour
         Load();
     }
 
-    // ─── Public API — Coin ────────────────────────────────────────────────────
+    // ─── Public API — HighestScore ────────────────────────────────────
+
+    /// <summary>
+    /// So sánh <paramref name="score"/> với highest score hiện tại.
+    /// Nếu cao hơn, cập nhật và lưu xuống file. Fire OnHighestScoreChanged nếu có kỷ lục mới.
+    /// </summary>
+    /// <returns>True nếu đây là kỷ lục mới, false nếu không vượt qua.</returns>
+    public bool UpdateHighestScore(int score)
+    {
+        if (score <= _data.highestScore) return false;
+
+        _data.highestScore = score;
+        OnHighestScoreChanged?.Invoke(_data.highestScore);
+        Save();
+        Debug.Log($"[PlayerDataManager] New highest score: {_data.highestScore}");
+        return true;
+    }
+
+    // ─── Public API — Coin ────────────────────────────────────────
 
     /// <summary>Cộng thêm <paramref name="amount"/> coin. Tự động Save.</summary>
     public void AddCoin(int amount)

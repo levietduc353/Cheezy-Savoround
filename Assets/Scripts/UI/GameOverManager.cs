@@ -1,6 +1,5 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary>
 /// Phát hiện trạng thái Game Over (main grid đầy) và hiển thị Game Over Canvas.
@@ -10,18 +9,20 @@ using UnityEngine.UI;
 ///   2. Sau mỗi lần plate được đặt, kiểm tra xem toàn bộ main grid đã đầy chưa.
 ///   3. Nếu đầy AND MergeAnimator không còn đang chạy animation:
 ///      • FSM → GameOverState  (chặn DragController + PowerUp 3D input)
-///      • Tạo UI blocker trong suốt (chặn click xuyên canvas)
+///      • Cập nhật highest score trong PlayerDataManager
 ///      • Enable _gameOverCanvas (hiển thị panel game over)
 ///      • Ghi điểm vào _scoreText từ ScoreManager.TotalPlatesCompleted
+///      • Ghi highest score vào _highestScoreText từ PlayerDataManager.HighestScore
 ///
 /// Lưu ý: MergeAnimator có thể giải phóng ô trống (dismiss plates) sau khi đặt.
 /// Vì vậy việc kiểm tra grid đầy được delay đến khi merge animation kết thúc.
 ///
 /// Setup trong Inspector:
-///   - Assign _mainGrid       : GridManager của main grid
-///   - Assign _fsm            : GameStateMachine
-///   - Assign _gameOverCanvas : Canvas đang disabled (sẽ được enable khi game over)
-///   - Assign _scoreText      : TMP_Text để hiển thị tổng số plate đã complete
+///   - Assign _mainGrid          : GridManager của main grid
+///   - Assign _fsm               : GameStateMachine
+///   - Assign _gameOverCanvas    : Canvas đang disabled (sẽ được enable khi game over)
+///   - Assign _scoreText         : TMP_Text để hiển thị tổng số plate đã complete
+///   - Assign _highestScoreText  : TMP_Text để hiển thị highest score từ PlayerDataManager
 /// </summary>
 public class GameOverManager : MonoBehaviour
 {
@@ -41,15 +42,12 @@ public class GameOverManager : MonoBehaviour
     [Tooltip("TMP_Text hiển thị tổng số plate đã hoàn thành (điểm cuối game).")]
     [SerializeField] private TMP_Text _scoreText;
 
+    [Tooltip("TMP_Text hiển thị kỷ lục cao nhất (highest score) từ PlayerDataManager.")]
+    [SerializeField] private TMP_Text _highestScoreText;
+
     // ─── Private state ────────────────────────────────────────────────────────
 
-    private bool  _gameOverTriggered;
-
-    /// <summary>
-    /// Image trong suốt full-screen được tạo tự động để hấp thụ mọi UI raycast,
-    /// chặn tất cả button/interaction thuộc các canvas khác phía sau canvas game over.
-    /// </summary>
-    private Image _inputBlocker;
+    private bool _gameOverTriggered;
 
     // ─── Unity lifecycle ──────────────────────────────────────────────────────
 
@@ -157,9 +155,9 @@ public class GameOverManager : MonoBehaviour
     /// Thực thi trình tự Game Over:
     ///   1. Đánh dấu đã trigger để tránh gọi lại.
     ///   2. FSM → GameOverState (chặn DragController + PowerUp 3D input).
-    ///   3. Tạo UI input blocker (Image trong suốt, Raycast Target = true).
+    ///   3. Cập nhật highest score trong PlayerDataManager (nếu điểm mới cao hơn).
     ///   4. Enable Game Over Canvas.
-    ///   5. Điền điểm vào TMP từ ScoreManager.TotalPlatesCompleted.
+    ///   5. Điền điểm và highest score vào TMP.
     /// </summary>
     private void TriggerGameOver()
     {
@@ -168,65 +166,31 @@ public class GameOverManager : MonoBehaviour
         // FSM → GameOverState: DragController và PowerUp đều block khi không ở Playing.
         _fsm?.ChangeState(_fsm.GameOver);
 
-        // Tạo blocker TRƯỚC khi enable canvas để nó sẵn sàng ngay khi canvas hiện lên.
-        AddInputBlocker();
+        // ── Cập nhật highest score ────────────────────────────────────────────────
+        int totalScore = ScoreManager.Instance != null
+            ? ScoreManager.Instance.TotalPlatesCompleted
+            : 0;
+
+        if (PlayerDataManager.Instance != null)
+        {
+            bool isNewRecord = PlayerDataManager.Instance.UpdateHighestScore(totalScore);
+            if (isNewRecord)
+                Debug.Log($"[GameOverManager] New highest score record: {totalScore}");
+        }
 
         // Hiện Game Over Canvas.
         if (_gameOverCanvas != null)
             _gameOverCanvas.gameObject.SetActive(true);
 
-        // Ghi điểm vào TMP.
-        int totalScore = ScoreManager.Instance != null
-            ? ScoreManager.Instance.TotalPlatesCompleted
-            : 0;
-
+        // Ghi điểm hiện tại vào TMP.
         if (_scoreText != null)
             _scoreText.text = totalScore.ToString();
 
+        // Ghi highest score vào TMP — lấy sau khi đã gọi UpdateHighestScore
+        // nên giá trị phản ánh đúng kỷ lục mới nhất.
+        if (_highestScoreText != null && PlayerDataManager.Instance != null)
+            _highestScoreText.text = PlayerDataManager.Instance.HighestScore.ToString();
+
         Debug.Log($"[GameOverManager] Game Over! Total plates completed: {totalScore}");
-    }
-
-    /// <summary>
-    /// Tạo một Image trong suốt (alpha = 0) full-screen stretch làm child đầu tiên
-    /// của _gameOverCanvas, với Raycast Target = true.
-    ///
-    /// Tại sao cần blocker này?
-    ///   Unity EventSystem gửi click event đến canvas có Sort Order cao nhất.
-    ///   Nếu Game Over Canvas không có element nào che phủ toàn màn hình thì
-    ///   click vẫn "xuyên qua" và chạm vào button/UI của canvas bên dưới.
-    ///   Blocker Image này hấp thụ toàn bộ raycast, ngăn event đến canvas khác.
-    ///
-    /// Chỉ tạo 1 lần duy nhất — nếu đã tồn tại thì bỏ qua.
-    /// </summary>
-    private void AddInputBlocker()
-    {
-        if (_gameOverCanvas == null) return;
-        if (_inputBlocker   != null) return; // đã tạo rồi, bỏ qua
-
-        // Tạo GameObject blocker, child của Game Over Canvas.
-        var blockerGo = new GameObject("InputBlocker",
-            typeof(RectTransform),
-            typeof(Image));
-
-        blockerGo.transform.SetParent(_gameOverCanvas.transform, false);
-
-        // SetAsFirstSibling → nằm dưới cùng trong hierarchy (vẽ trước),
-        // nhưng Raycast Target = true trên toàn màn hình đủ để block mọi click.
-        blockerGo.transform.SetAsFirstSibling();
-
-        // Stretch full-screen theo canvas.
-        RectTransform rt = blockerGo.GetComponent<RectTransform>();
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
-
-        // Alpha = 0: hoàn toàn trong suốt về mặt hình ảnh.
-        // raycastTarget = true: hấp thụ mọi pointer event của EventSystem. ← mấu chốt
-        _inputBlocker              = blockerGo.GetComponent<Image>();
-        _inputBlocker.color        = new Color(0f, 0f, 0f, 0f);
-        _inputBlocker.raycastTarget = true;
-
-        Debug.Log("[GameOverManager] Full-screen input blocker created on Game Over Canvas.");
     }
 }

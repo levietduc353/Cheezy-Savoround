@@ -5,6 +5,7 @@ using System;
 ///
 /// Bao gồm:
 ///   - coin                : số coin player sở hữu.
+///   - highestScore        : điểm cao nhất từ trước đến nay (tổng plate đã hoàn thành).
 ///   - powerUpQuantities   : số lượng từng loại power-up còn lại.
 ///
 /// Lớp này là pure data (không kế thừa MonoBehaviour).
@@ -15,6 +16,9 @@ public class PlayerData
 {
     /// <summary>Số coin hiện tại của player.</summary>
     public int coin;
+
+    /// <summary>Điểm cao nhất (tổng số plate đã hoàn thành) từ trước đến nay. Không bao giờ giảm.</summary>
+    public int highestScore;
 
     /// <summary>Số lượng từng loại power-up player đang sở hữu.</summary>
     public PowerUpQuantities powerUpQuantities = new PowerUpQuantities();

@@ -10,6 +10,8 @@ using UnityEngine;
 ///       • currentScore resets to 0
 ///       • threshold = Mathf.RoundToInt(threshold * 1.5f)
 ///       • _currentLevel increments by 1
+///   - Every coinRewardEveryLevels levels (e.g. every 3), coinRewardAmount coin is awarded
+///     via PlayerDataManager.AddCoin().
 ///
 /// Subscribes to MergeAnimator.OnPlateCompleted (Observer Pattern).
 /// Broadcasts OnFillChanged(float) and OnLevelChanged(int) for ScoreUI to consume.
@@ -53,11 +55,18 @@ public class ScoreManager : MonoBehaviour
     /// </summary>
     public event System.Action<int> OnTotalScoreChanged;
 
-    // ─── Private state ────────────────────────────────────────────────────────
+    // ─── Private state ─────────────────────────────────────────────────────────
 
     private int _currentScore;
     private int _currentThreshold;
     private int _currentLevel;
+
+    // ─ Coin reward config (loaded from score_config.json) ─────────────────
+    private int _coinRewardAmount      = 20; // coin thưởng mỗi mốc
+    private int _coinRewardEveryLevels = 3;  // cứ mỗi X level thì thưởng
+
+    /// <summary>Level cao nhất đã được nhận thưởng coin, tránh thưởng trung.</summary>
+    private int _lastCoinRewardLevel;
 
     /// <summary>Tổng số plate đã hoàn thành từ đầu game — không bao giờ reset.</summary>
     private int _totalPlatesCompleted;
@@ -124,6 +133,18 @@ public class ScoreManager : MonoBehaviour
             _currentLevel++;
             OnLevelChanged?.Invoke(_currentLevel);
 
+            // ── Coin reward: thưởng mỗi _coinRewardEveryLevels level ────────────────────
+            // Dùng _lastCoinRewardLevel để đảm bảo mỗi mốc chỉ thưởng đúng 1 lần
+            // dù HandlePlateCompleted có thể được gọi nhiều lần liên tiếp.
+            int rewardMilestone = (_currentLevel / _coinRewardEveryLevels) * _coinRewardEveryLevels;
+            if (rewardMilestone > 0 && rewardMilestone > _lastCoinRewardLevel
+                && _currentLevel % _coinRewardEveryLevels == 0)
+            {
+                _lastCoinRewardLevel = rewardMilestone;
+                PlayerDataManager.Instance?.AddCoin(_coinRewardAmount);
+                Debug.Log($"[ScoreManager] Level {_currentLevel} → coin reward +{_coinRewardAmount}!");
+            }
+
             OnBarCompleted?.Invoke(_currentThreshold);
             Debug.Log($"[ScoreManager] Bar complete! Level: {_currentLevel}, New threshold: {_currentThreshold}");
         }
@@ -159,6 +180,16 @@ public class ScoreManager : MonoBehaviour
         _currentScore     = 0;
         _currentLevel     = 1;  // Level bắt đầu từ 1.
 
-        Debug.Log($"[ScoreManager] Loaded. Initial threshold: {_currentThreshold}");
+        // Load coin reward params (optional — fall back to defaults if absent).
+        if (config.coinRewardEveryLevels > 0)
+            _coinRewardEveryLevels = config.coinRewardEveryLevels;
+        if (config.coinRewardAmount > 0)
+            _coinRewardAmount = config.coinRewardAmount;
+
+        // Khởi tạo _lastCoinRewardLevel = 0 (chưa thưởng lần nào).
+        _lastCoinRewardLevel = 0;
+
+        Debug.Log($"[ScoreManager] Loaded. Initial threshold: {_currentThreshold}, " +
+                  $"coin reward: +{_coinRewardAmount} every {_coinRewardEveryLevels} levels.");
     }
 }
