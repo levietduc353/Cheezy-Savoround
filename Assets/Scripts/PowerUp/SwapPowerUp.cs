@@ -255,6 +255,9 @@ public class SwapPowerUp : MonoBehaviour
         // Trừ 1 lượt sử dụng sau khi swap thành công.
         PlayerDataManager.Instance?.UsePowerUp("swap");
 
+        // Đánh dấu đã dùng power-up trong session này (dùng cho achievement #3).
+        _fsm.MarkPowerUpUsed();
+
         SetButtonHighlight(false);
 
         // Return to Playing. If MergeAnimator was triggered by PlacePlate above,

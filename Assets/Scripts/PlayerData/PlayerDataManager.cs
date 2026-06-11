@@ -37,6 +37,13 @@ public class PlayerDataManager : MonoBehaviour
     public event System.Action<int>    OnCoinChanged;
 
     /// <summary>
+    /// Fired mỗi khi có coin được cộng vào (không giảm khi tiêu).
+    /// Argument: tổng totalCoinEarned mới sau khi cộng.
+    /// AchievementManager subscribe để theo dõi tiến trình achievement #4.
+    /// </summary>
+    public event System.Action<int> OnCoinEarned;
+
+    /// <summary>
     /// Fired khi highest score được cập nhật (vượt qua kỷ lục cũ).
     /// Argument: giá trị highest score mới.
     /// </summary>
@@ -62,10 +69,22 @@ public class PlayerDataManager : MonoBehaviour
 
     // ─── Public properties ────────────────────────────────────────────────────
 
-    public int Coin     => _data.coin;
+    public int Coin         => _data.coin;
 
     /// <summary>Điểm cao nhất từ trước đến nay (không bao giờ giảm).</summary>
     public int HighestScore => _data.highestScore;
+
+    /// <summary>
+    /// Tổng số lần unlock loại pizza mới (pizza_4 / pizza_5 / pizza_6).
+    /// Không tính 3 loại có sẵn từ đầu. Tối đa = 3.
+    /// </summary>
+    public int SliceUnlocked     => _data.sliceUnlocked;
+
+    /// <summary>Tổng số đĩa hoàn thành tích lũy toàn thời gian (achievement #1).</summary>
+    public int TotalPlatesAllTime => _data.totalPlatesAllTime;
+
+    /// <summary>Tổng coin đã nhận vào tích lũy từ mọi nguồn (achievement #4).</summary>
+    public int TotalCoinEarned    => _data.totalCoinEarned;
 
     public int SausageQty  => _data.powerUpQuantities.sausage;
     public int CutterQty   => _data.powerUpQuantities.cutter;
@@ -107,16 +126,120 @@ public class PlayerDataManager : MonoBehaviour
         return true;
     }
 
+    // ─── Public API — SliceUnlocked ──────────────────────────────────────
+
+    /// <summary>
+    /// Gọi bởi UnlockManager khi 1 loại pizza mới được unlock trong session.
+    /// Tăng _data.sliceUnlocked thêm 1 và lưu xuống file.
+    /// </summary>
+    public void AddSliceUnlocked()
+    {
+        _data.sliceUnlocked++;
+        Save();
+        Debug.Log($"[PlayerDataManager] SliceUnlocked +1 → total: {_data.sliceUnlocked}");
+    }
+
+    // ─── Public API — Achievement ─────────────────────────────────
+
+    /// <summary>
+    /// Tăng tổng số đĩa hoàn thành all-time thêm 1 và save.
+    /// Gọi bởi AchievementManager khi MergeAnimator.OnPlateCompleted bắn.
+    /// </summary>
+    public void AddTotalPlate()
+    {
+        _data.totalPlatesAllTime++;
+        Save();
+    }
+
+    /// <summary>
+    /// Đọc tiến trình của achievement <paramref name="achievementId"/>.
+    /// Trả về 0 nếu array chưa khởi tạo hoặc index out of range.
+    /// </summary>
+    public int GetAchievementProgress(int achievementId)
+    {
+        EnsureAchievementArrays();
+        if (achievementId < 0 || achievementId >= _data.achievementProgresses.Length) return 0;
+        return _data.achievementProgresses[achievementId];
+    }
+
+    /// <summary>
+    /// Ghi tiến trình achievement <paramref name="achievementId"/> và save.
+    /// Không cho ghi vượt targetValue (caller chịu trách nhiệm clamp).
+    /// </summary>
+    public void SetAchievementProgress(int achievementId, int value)
+    {
+        EnsureAchievementArrays();
+        if (achievementId < 0 || achievementId >= _data.achievementProgresses.Length) return;
+        _data.achievementProgresses[achievementId] = value;
+        Save();
+    }
+
+    /// <summary>
+    /// Kiểm tra xem achievement đã được nhận thưởng (claim) chưa.
+    /// </summary>
+    public bool IsAchievementClaimed(int achievementId)
+    {
+        EnsureAchievementArrays();
+        if (achievementId < 0 || achievementId >= _data.achievementClaimedStates.Length) return false;
+        return _data.achievementClaimedStates[achievementId];
+    }
+
+    /// <summary>
+    /// Đánh dấu achievement đã được nhận thưởng và save.
+    /// </summary>
+    public void SetAchievementClaimed(int achievementId)
+    {
+        EnsureAchievementArrays();
+        if (achievementId < 0 || achievementId >= _data.achievementClaimedStates.Length) return;
+        _data.achievementClaimedStates[achievementId] = true;
+        Save();
+    }
+
+    /// <summary>
+    /// Đảm bảo các array achievement tồn tại với đúng kích thước (5 phần tử).
+    /// Xử lý save file cũ không có field này bằng cách khởi tạo với giá trị mặc định.
+    /// </summary>
+    private void EnsureAchievementArrays()
+    {
+        const int achievementCount = 5;
+        
+        // Progresses array
+        if (_data.achievementProgresses == null ||
+            _data.achievementProgresses.Length < achievementCount)
+        {
+            int[] fresh = new int[achievementCount];
+            if (_data.achievementProgresses != null)
+                for (int i = 0; i < _data.achievementProgresses.Length; i++)
+                    fresh[i] = _data.achievementProgresses[i];
+            _data.achievementProgresses = fresh;
+        }
+
+        // Claimed states array
+        if (_data.achievementClaimedStates == null ||
+            _data.achievementClaimedStates.Length < achievementCount)
+        {
+            bool[] fresh = new bool[achievementCount];
+            if (_data.achievementClaimedStates != null)
+                for (int i = 0; i < _data.achievementClaimedStates.Length; i++)
+                    fresh[i] = _data.achievementClaimedStates[i];
+            _data.achievementClaimedStates = fresh;
+        }
+    }
+
+
     // ─── Public API — Coin ────────────────────────────────────────
 
     /// <summary>Cộng thêm <paramref name="amount"/> coin. Tự động Save.</summary>
     public void AddCoin(int amount)
     {
         if (amount <= 0) return;
-        _data.coin += amount;
+        _data.coin          += amount;
+        _data.totalCoinEarned += amount;  // tích lũy không bao giờ giảm
         OnCoinChanged?.Invoke(_data.coin);
+        OnCoinEarned?.Invoke(_data.totalCoinEarned);
         Save();
-        Debug.Log($"[PlayerDataManager] +{amount} coin → total: {_data.coin}");
+        Debug.Log($"[PlayerDataManager] +{amount} coin → balance: {_data.coin}, " +
+                  $"totalEarned: {_data.totalCoinEarned}");
     }
 
     /// <summary>

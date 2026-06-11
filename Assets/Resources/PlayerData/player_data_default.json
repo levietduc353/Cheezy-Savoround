@@ -1,14 +1,31 @@
 {
   "coin": 0,
   "highestScore": 0,
+  "sliceUnlocked": 0,
+  "totalPlatesAllTime": 0,
+  "totalCoinEarned": 0,
+  "achievementProgresses": [
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "achievementClaimedStates": [
+    false,
+    false,
+    false,
+    false,
+    false
+  ],
   "dailyReward": {
     "lastClaimDate": "",
     "lastClaimedDay": 0
   },
   "powerUpQuantities": {
-    "sausage": 3,
-    "cutter": 3,
-    "trashCan": 3,
-    "swap": 3
+    "sausage": 0,
+    "cutter": 0,
+    "trashCan": 0,
+    "swap": 0
   }
 }

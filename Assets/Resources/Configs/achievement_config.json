@@ -1,0 +1,50 @@
+{
+  "achievements": [
+    {
+      "id": 0,
+      "targetValue": 50,
+      "reward": {
+        "coin": 100,
+        "powerUpId": "",
+        "powerUpAmount": 0
+      }
+    },
+    {
+      "id": 1,
+      "targetValue": 5,
+      "reward": {
+        "coin": 0,
+        "powerUpId": "sausage",
+        "powerUpAmount": 1
+      }
+    },
+    {
+      "id": 2,
+      "targetValue": 1,
+      "minLevelRequired": 12,
+      "reward": {
+        "coin": 300,
+        "powerUpId": "",
+        "powerUpAmount": 0
+      }
+    },
+    {
+      "id": 3,
+      "targetValue": 1000,
+      "reward": {
+        "coin": 0,
+        "powerUpId": "trashCan",
+        "powerUpAmount": 1
+      }
+    },
+    {
+      "id": 4,
+      "targetValue": 7,
+      "reward": {
+        "coin": 500,
+        "powerUpId": "trashCan",
+        "powerUpAmount": 2
+      }
+    }
+  ]
+}

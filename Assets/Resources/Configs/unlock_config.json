@@ -1,0 +1,15 @@
+{
+  "unlockRules": [
+    { "atLevel": 1,  "unlockedPizzaTypeId": "pizza_1" },
+    { "atLevel": 1,  "unlockedPizzaTypeId": "pizza_2" },
+    { "atLevel": 1,  "unlockedPizzaTypeId": "pizza_3" },
+    { "atLevel": 3,  "unlockedPizzaTypeId": "pizza_4" },
+    { "atLevel": 6,  "unlockedPizzaTypeId": "pizza_5" },
+    { "atLevel": 10, "unlockedPizzaTypeId": "pizza_6" }
+  ],
+  "fillerChanceByLevel": [
+    { "fromLevel": 1,  "fillerChance": 0.0 },
+    { "fromLevel": 3,  "fillerChance": 0.3 },
+    { "fromLevel": 6,  "fillerChance": 0.6 }
+  ]
+}

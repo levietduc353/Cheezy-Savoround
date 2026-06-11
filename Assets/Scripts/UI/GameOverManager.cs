@@ -45,6 +45,16 @@ public class GameOverManager : MonoBehaviour
     [Tooltip("TMP_Text hiển thị kỷ lục cao nhất (highest score) từ PlayerDataManager.")]
     [SerializeField] private TMP_Text _highestScoreText;
 
+    // ─── Events (Observer Pattern) ────────────────────────────────────────────
+
+    /// <summary>
+    /// Fired khi game kết thúc (toàn bộ ô main grid đầy).
+    /// AchievementManager subscribe để kiểm tra điều kiện achievement #3
+    /// (hoàn thành 1 ván không dùng trợ giúp).
+    /// Static để không cần reference trực tiếp tới GameOverManager instance.
+    /// </summary>
+    public static event System.Action OnGameOver;
+
     // ─── Private state ────────────────────────────────────────────────────────
 
     private bool _gameOverTriggered;
@@ -165,6 +175,10 @@ public class GameOverManager : MonoBehaviour
 
         // FSM → GameOverState: DragController và PowerUp đều block khi không ở Playing.
         _fsm?.ChangeState(_fsm.GameOver);
+
+        // ── Fire game-over event (Observer) ─────────────────────────────────────────
+        // AchievementManager dùng event này để kiểm tra achievement #3.
+        OnGameOver?.Invoke();
 
         // ── Cập nhật highest score ────────────────────────────────────────────────
         int totalScore = ScoreManager.Instance != null

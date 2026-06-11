@@ -229,6 +229,9 @@ public class FillPowerUp : MonoBehaviour
         // Trừ 1 lượt sử dụng sau khi thực sự đặt thành công.
         PlayerDataManager.Instance?.UsePowerUp("cutter");
 
+        // Đánh dấu đã dùng power-up trong session này (dùng cho achievement #3).
+        _fsm.MarkPowerUpUsed();
+
         Debug.Log($"[FillPowerUp] Fill plate spawned at ({emptyRow},{emptyCol}) — " +
                   $"{sliceCount}× '{targetPlate.PizzaTypeId}' → merge triggered.");
     }

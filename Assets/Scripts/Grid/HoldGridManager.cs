@@ -177,27 +177,46 @@ public class HoldGridManager : MonoBehaviour
         plateGo.transform.SetParent(transform);  // Keep hold-grid plates organised.
         plateGo.transform.position = worldPos;
 
-        // ── Random pizza type ─────────────────────────────────────────────────────
-        int typeIndex = UnityEngine.Random.Range(0, _pizzaConfig.pizzaTypes.Length);
-        PizzaTypeData pizzaType = _pizzaConfig.pizzaTypes[typeIndex];
+        // ── Random pizza type — only from currently unlocked types ──────────────
+        // UnlockManager.UnlockedTypeIds starts with [pizza_1, pizza_2, pizza_3]
+        // and grows as the player levels up within the session.
+        string selectedTypeId = PickRandomUnlockedTypeId();
+        PizzaTypeData pizzaType = FindPizzaTypeById(selectedTypeId);
+
+        if (pizzaType == null)
+        {
+            Debug.LogError($"[HoldGridManager] Pizza type '{selectedTypeId}' not found in pizza_config. " +
+                           "Returning plate to pool.");
+            PoolManager.Instance.Release(platePoolId, plateGo);
+            return;
+        }
 
         // ── Weighted random slice count ──────────────────────────────────────────
         int totalCount = GetWeightedRandomCount();
 
-        // ── Filler slices when plate is full ─────────────────────────────────
+        // ── Filler slices — gated by UnlockManager.CurrentFillerChance ────────
+        // Filler only makes sense when: plate is full AND at least 2 types are
+        // unlocked (otherwise no filler candidates exist) AND the RNG roll passes.
         string[] fillerPoolIds = null;
         int mainCount = totalCount;
 
-        bool isFull = totalCount == _pizzaConfig.maxSlicesPerPlate;
-        bool fillerEnabled = _pizzaConfig.maxFillerSlicesWhenFull > 0;
+        bool isFull          = totalCount == _pizzaConfig.maxSlicesPerPlate;
+        bool fillerEnabled   = _pizzaConfig.maxFillerSlicesWhenFull > 0;
+        bool hasFillerTypes  = UnlockManager.Instance != null &&
+                               UnlockManager.Instance.UnlockedTypeIds.Count > 1;
+        float fillerChance   = UnlockManager.Instance != null
+                               ? UnlockManager.Instance.CurrentFillerChance : 0f;
 
-        if (isFull && fillerEnabled)
+        // Roll against the level-dependent filler chance before spawning fillers.
+        bool fillerRoll = UnityEngine.Random.value < fillerChance;
+
+        if (isFull && fillerEnabled && hasFillerTypes && fillerRoll)
         {
             int fillerCount = UnityEngine.Random.Range(
                 _pizzaConfig.minFillerSlicesWhenFull,
                 _pizzaConfig.maxFillerSlicesWhenFull + 1);
 
-            mainCount    = totalCount - fillerCount;
+            mainCount     = totalCount - fillerCount;
             fillerPoolIds = PickFillerPoolIds(pizzaType.id, fillerCount);
         }
 
@@ -259,15 +278,54 @@ public class HoldGridManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Returns an array of <paramref name="count"/> pool IDs chosen randomly from pizza types
-    /// other than <paramref name="excludeTypeId"/>.
+    /// Returns a random pizza type id chosen from the currently unlocked types.
+    /// Falls back to "pizza_1" if UnlockManager is unavailable (e.g. during tests).
+    /// </summary>
+    private string PickRandomUnlockedTypeId()
+    {
+        if (UnlockManager.Instance == null || UnlockManager.Instance.UnlockedTypeIds.Count == 0)
+        {
+            Debug.LogWarning("[HoldGridManager] UnlockManager not available — using 'pizza_1' as fallback.");
+            return "pizza_1";
+        }
+
+        var ids = UnlockManager.Instance.UnlockedTypeIds;
+        return ids[UnityEngine.Random.Range(0, ids.Count)];
+    }
+
+    /// <summary>
+    /// Looks up a <see cref="PizzaTypeData"/> entry by its id in the loaded pizza config.
+    /// Returns null if not found.
+    /// </summary>
+    private PizzaTypeData FindPizzaTypeById(string typeId)
+    {
+        if (_pizzaConfig?.pizzaTypes == null) return null;
+        foreach (PizzaTypeData t in _pizzaConfig.pizzaTypes)
+            if (t.id == typeId) return t;
+        return null;
+    }
+
+    /// <summary>
+    /// Returns an array of <paramref name="count"/> pool IDs chosen randomly from
+    /// pizza types OTHER than <paramref name="excludeTypeId"/> that are currently unlocked.
+    /// This ensures filler slices only come from types the player has already seen.
     /// </summary>
     private string[] PickFillerPoolIds(string excludeTypeId, int count)
     {
-        // Collect pool IDs of all pizza types except the main type.
+        // Only consider unlocked types as filler candidates.
         var otherIds = new System.Collections.Generic.List<string>();
-        foreach (PizzaTypeData t in _pizzaConfig.pizzaTypes)
-            if (t.id != excludeTypeId) otherIds.Add(t.poolId);
+
+        if (UnlockManager.Instance != null)
+        {
+            foreach (string id in UnlockManager.Instance.UnlockedTypeIds)
+                if (id != excludeTypeId) otherIds.Add(id);
+        }
+        else
+        {
+            // Fallback: use full pizza config list (shouldn't happen in normal play).
+            foreach (PizzaTypeData t in _pizzaConfig.pizzaTypes)
+                if (t.id != excludeTypeId) otherIds.Add(t.poolId);
+        }
 
         if (otherIds.Count == 0 || count <= 0) return null;
 

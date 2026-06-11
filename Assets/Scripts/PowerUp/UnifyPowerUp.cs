@@ -177,7 +177,10 @@ public class UnifyPowerUp : MonoBehaviour
         // Trừ 1 lượt sử dụng sau khi convert thành công.
         PlayerDataManager.Instance?.UsePowerUp("sausage");
 
-        // ── Deactivate power-up ───────────────────────────────────────────────────────────────────
+        // Đánh dấu đã dùng power-up trong session này (dùng cho achievement #3).
+        _fsm.MarkPowerUpUsed();
+
+        // ── Deactivate power-up ──────────────────────────────────────────────────────────────────────────
         SetButtonHighlight(false);
         _fsm.ChangeState(_fsm.Playing);
     }

@@ -40,6 +40,13 @@ public class GameStateMachine : MonoBehaviour
     private IGameState _currentState;
     public  IGameState CurrentState => _currentState;
 
+    /// <summary>
+    /// True nếu player đã sử dụng ít nhất 1 power-up thành công trong session này.
+    /// Reset tự động mỗi lần scene reload (không phải DontDestroyOnLoad).
+    /// AchievementManager đọc giá trị này khi Game Over để kiểm tra achievement #3.
+    /// </summary>
+    public bool PowerUpUsedThisSession { get; private set; }
+
     // ─── Unity lifecycle ──────────────────────────────────────────────────────
 
     private void Awake()
@@ -85,6 +92,15 @@ public class GameStateMachine : MonoBehaviour
         _currentState?.Enter();
 
         Debug.Log($"[GameStateMachine] → {newState.GetType().Name}");
+    }
+
+    /// <summary>
+    /// Đánh dấu rằng player đã dùng power-up thành công trong session này.
+    /// Gọi bởi từng PowerUp class khi execute thành công (không phải khi cancel).
+    /// </summary>
+    public void MarkPowerUpUsed()
+    {
+        PowerUpUsedThisSession = true;
     }
 }
 

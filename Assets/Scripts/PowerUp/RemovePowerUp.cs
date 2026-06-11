@@ -159,6 +159,9 @@ public class RemovePowerUp : MonoBehaviour
         // Trừ 1 lượt sử dụng khi remove thành công.
         PlayerDataManager.Instance?.UsePowerUp("trashCan");
 
+        // Đánh dấu đã dùng power-up trong session này (dùng cho achievement #3).
+        _fsm.MarkPowerUpUsed();
+
         // Delegate to MergeAnimator — reuses the dismiss animation without scoring.
         MergeAnimator.Instance.RemovePlateWithAnimation(plate, _mainGrid, _fsm);
 
