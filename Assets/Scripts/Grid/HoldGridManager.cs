@@ -253,28 +253,42 @@ public class HoldGridManager : MonoBehaviour
     /// </summary>
     private int GetWeightedRandomCount()
     {
+        int maxAllowed = _pizzaConfig.spawnCountMax;
+
+        // Ràng buộc: Trước level 6, tối đa chỉ được sinh ra đĩa có 4 lát.
+        // Từ level 6 trở đi mới mở khóa mốc 5 và 6 lát.
+        if (ScoreManager.Instance != null && ScoreManager.Instance.CurrentLevel < 6)
+        {
+            maxAllowed = Mathf.Min(maxAllowed, 4);
+        }
+
         int[] weights = _pizzaConfig.spawnCountWeights;
 
         // Fallback: no weights defined — use uniform random.
         if (weights == null || weights.Length == 0)
-            return UnityEngine.Random.Range(_pizzaConfig.spawnCountMin, _pizzaConfig.spawnCountMax + 1);
+            return UnityEngine.Random.Range(_pizzaConfig.spawnCountMin, maxAllowed + 1);
 
-        // Sum all weights to get the total pool.
+        int countRange = maxAllowed - _pizzaConfig.spawnCountMin + 1;
+        int maxIndex = Mathf.Min(countRange, weights.Length);
+
+        // Sum all valid weights to get the total pool.
         int totalWeight = 0;
-        foreach (int w in weights) totalWeight += w;
+        for (int i = 0; i < maxIndex; i++) 
+            totalWeight += weights[i];
+
+        if (totalWeight == 0) return maxAllowed;
 
         int roll       = UnityEngine.Random.Range(0, totalWeight);
         int cumulative = 0;
-        int countRange = _pizzaConfig.spawnCountMax - _pizzaConfig.spawnCountMin + 1;
 
-        for (int i = 0; i < countRange && i < weights.Length; i++)
+        for (int i = 0; i < maxIndex; i++)
         {
             cumulative += weights[i];
             if (roll < cumulative)
                 return _pizzaConfig.spawnCountMin + i;
         }
 
-        return _pizzaConfig.spawnCountMax; // Fallback to max.
+        return maxAllowed; // Fallback to max.
     }
 
     /// <summary>
