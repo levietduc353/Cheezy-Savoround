@@ -28,6 +28,12 @@ public class ScoreUI : MonoBehaviour
     [Tooltip("TMP label that displays the NEXT level number.")]
     [SerializeField] private TMP_Text _nextLevelText;
 
+    [Header("Animation")]
+    [Tooltip("Thời gian để thanh kinh nghiệm trượt tới mức mới (giây).")]
+    [SerializeField] private float _fillAnimationDuration = 0.2f;
+    
+    private Coroutine _fillCoroutine;
+
     // ─── Unity lifecycle ──────────────────────────────────────────────────────
 
     private void Start()
@@ -68,11 +74,55 @@ public class ScoreUI : MonoBehaviour
 
     // ─── Private handlers ─────────────────────────────────────────────────────
 
-    /// <summary>Sets fillAmount on the target Image (value is already clamped to [0,1]).</summary>
-    private void UpdateFill(float fillAmount)
+    /// <summary>Sets fillAmount on the target Image smoothly using a Coroutine.</summary>
+    private void UpdateFill(float targetFill)
     {
-        if (_fillImage != null)
-            _fillImage.fillAmount = fillAmount;
+        if (_fillImage == null) return;
+
+        if (_fillCoroutine != null)
+            StopCoroutine(_fillCoroutine);
+
+        if (!gameObject.activeInHierarchy)
+        {
+            _fillImage.fillAmount = targetFill;
+            return;
+        }
+
+        _fillCoroutine = StartCoroutine(AnimateFillCoroutine(targetFill));
+    }
+
+    private System.Collections.IEnumerator AnimateFillCoroutine(float targetFill)
+    {
+        float startFill = _fillImage.fillAmount;
+
+        // Nếu target nhỏ hơn hiện tại (tức là vừa reset về 0 do lên cấp),
+        // mượt mà fill lên 1.0 trước rồi mới reset về 0.
+        if (targetFill < startFill)
+        {
+            float wrapDuration = _fillAnimationDuration * 0.5f;
+            float elapsedWrap = 0f;
+            while (elapsedWrap < wrapDuration)
+            {
+                elapsedWrap += Time.deltaTime;
+                _fillImage.fillAmount = Mathf.Lerp(startFill, 1f, elapsedWrap / wrapDuration);
+                yield return null;
+            }
+            _fillImage.fillAmount = 0f;
+            startFill = 0f;
+        }
+
+        // Fill tới đích mới
+        float elapsed = 0f;
+        while (elapsed < _fillAnimationDuration)
+        {
+            elapsed += Time.deltaTime;
+            // Dùng ease out (SmoothStep) để thanh chạy chậm dần ở cuối
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / _fillAnimationDuration);
+            _fillImage.fillAmount = Mathf.Lerp(startFill, targetFill, t);
+            yield return null;
+        }
+        
+        _fillImage.fillAmount = targetFill;
     }
 
     /// <summary>

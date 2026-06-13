@@ -45,6 +45,23 @@ public class GameOverManager : MonoBehaviour
     [Tooltip("TMP_Text hiển thị kỷ lục cao nhất (highest score) từ PlayerDataManager.")]
     [SerializeField] private TMP_Text _highestScoreText;
 
+    [Header("Audio")]
+    [Tooltip("AudioSource to play the game over sound.")]
+    [SerializeField] private AudioSource _audioSource;
+
+    [Tooltip("Sound played when the game is over.")]
+    [SerializeField] private AudioClip _gameOverSound;
+
+    [Header("Animation")]
+    [Tooltip("Panel chính để tạo hiệu ứng trượt. Nếu null, sẽ cố tìm object con đầu tiên trong Canvas.")]
+    [SerializeField] private RectTransform _gameOverPanel;
+
+    [Tooltip("Độ cao (pixel) mà panel sẽ bắt đầu rơi xuống.")]
+    [SerializeField] private float _dropOffset = 1000f;
+
+    [Tooltip("Thời gian trượt xuống (giây).")]
+    [SerializeField] private float _dropDuration = 0.5f;
+
     // ─── Events (Observer Pattern) ────────────────────────────────────────────
 
     /// <summary>
@@ -58,6 +75,7 @@ public class GameOverManager : MonoBehaviour
     // ─── Private state ────────────────────────────────────────────────────────
 
     private bool _gameOverTriggered;
+    private Vector2 _panelOriginalPos;
 
     // ─── Unity lifecycle ──────────────────────────────────────────────────────
 
@@ -66,6 +84,18 @@ public class GameOverManager : MonoBehaviour
         // Đảm bảo Game Over Canvas đang tắt khi game khởi động.
         if (_gameOverCanvas != null)
             _gameOverCanvas.gameObject.SetActive(false);
+
+        // Tự động tìm Panel nếu chưa gán
+        if (_gameOverPanel == null && _gameOverCanvas != null && _gameOverCanvas.transform.childCount > 0)
+        {
+            _gameOverPanel = _gameOverCanvas.transform.GetChild(0).GetComponent<RectTransform>();
+        }
+
+        // Lưu lại vị trí gốc để làm đích đến cho animation
+        if (_gameOverPanel != null)
+        {
+            _panelOriginalPos = _gameOverPanel.anchoredPosition;
+        }
     }
 
     private void OnEnable()
@@ -173,6 +203,9 @@ public class GameOverManager : MonoBehaviour
     {
         _gameOverTriggered = true;
 
+        if (_audioSource != null && _gameOverSound != null)
+            _audioSource.PlayOneShot(_gameOverSound);
+
         // FSM → GameOverState: DragController và PowerUp đều block khi không ở Playing.
         _fsm?.ChangeState(_fsm.GameOver);
 
@@ -196,6 +229,12 @@ public class GameOverManager : MonoBehaviour
         if (_gameOverCanvas != null)
             _gameOverCanvas.gameObject.SetActive(true);
 
+        // Chạy animation rơi xuống
+        if (_gameOverPanel != null)
+        {
+            StartCoroutine(DropPanelCoroutine());
+        }
+
         // Ghi điểm hiện tại vào TMP.
         if (_scoreText != null)
             _scoreText.text = totalScore.ToString();
@@ -206,5 +245,31 @@ public class GameOverManager : MonoBehaviour
             _highestScoreText.text = PlayerDataManager.Instance.HighestScore.ToString();
 
         Debug.Log($"[GameOverManager] Game Over! Total plates completed: {totalScore}");
+    }
+
+    private System.Collections.IEnumerator DropPanelCoroutine()
+    {
+        Vector2 startPos = _panelOriginalPos + new Vector2(0f, _dropOffset);
+        Vector2 endPos = _panelOriginalPos;
+
+        _gameOverPanel.anchoredPosition = startPos;
+
+        float elapsed = 0f;
+        while (elapsed < _dropDuration)
+        {
+            // Dùng unscaledDeltaTime để đề phòng trường hợp game bị pause (Time.timeScale = 0)
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / _dropDuration);
+            
+            // Công thức EaseOutBack: trượt xuống, nhún quá đà một chút rồi nảy lại vị trí gốc
+            float c1 = 1.70158f;
+            float c3 = c1 + 1f;
+            float eased = 1f + c3 * Mathf.Pow(t - 1f, 3f) + c1 * Mathf.Pow(t - 1f, 2f);
+
+            _gameOverPanel.anchoredPosition = Vector2.LerpUnclamped(startPos, endPos, eased);
+            yield return null;
+        }
+
+        _gameOverPanel.anchoredPosition = endPos;
     }
 }

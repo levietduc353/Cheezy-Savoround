@@ -701,6 +701,11 @@ MonoBehaviour:
   _gameOverCanvas: {fileID: 1684315488}
   _scoreText: {fileID: 1971295422}
   _highestScoreText: {fileID: 1242024115}
+  _audioSource: {fileID: 259133527}
+  _gameOverSound: {fileID: 8300000, guid: 7d610b32b7d027f4ba8736088aea4a4d, type: 3}
+  _gameOverPanel: {fileID: 1553422568}
+  _dropOffset: 1000
+  _dropDuration: 0.5
 --- !u!4 &155439003
 Transform:
   m_ObjectHideFlags: 0
@@ -991,8 +996,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _targetCanvas: {fileID: 1699418592}
-  _clickSound: {fileID: 0}
-  _audioSource: {fileID: 0}
+  _clickSound: {fileID: 8300000, guid: 45f90d1a85bc35c47bdf293ffc02a838, type: 3}
+  _audioSource: {fileID: 259133527}
 --- !u!114 &224679200
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1832,7 +1837,7 @@ Transform:
   m_GameObject: {fileID: 385609002}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 5.3, z: 0}
+  m_LocalPosition: {x: 0, y: 5.3, z: -2.1000004}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2944,8 +2949,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8c387a41d757f3143943c35094081255, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _clickSound: {fileID: 0}
-  _audioSource: {fileID: 0}
+  _clickSound: {fileID: 8300000, guid: 45f90d1a85bc35c47bdf293ffc02a838, type: 3}
+  _audioSource: {fileID: 259133527}
 --- !u!1001 &693442001
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2976,7 +2981,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4844696526320492581, guid: 9797c5a4efb361846a5a750e9314f736, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -17.4
+      value: -19.5
       objectReference: {fileID: 0}
     - target: {fileID: 4844696526320492581, guid: 9797c5a4efb361846a5a750e9314f736, type: 3}
       propertyPath: m_LocalRotation.w
@@ -4340,8 +4345,8 @@ MonoBehaviour:
   _loadByName: 1
   _sceneName: MainMenu
   _sceneBuildIndex: 0
-  _clickSound: {fileID: 0}
-  _audioSource: {fileID: 0}
+  _clickSound: {fileID: 8300000, guid: 45f90d1a85bc35c47bdf293ffc02a838, type: 3}
+  _audioSource: {fileID: 259133527}
 --- !u!1 &949804006
 GameObject:
   m_ObjectHideFlags: 0
@@ -7324,7 +7329,7 @@ Transform:
   m_GameObject: {fileID: 1541013918}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 4.73, z: -17.4}
+  m_LocalPosition: {x: 0, y: 4.73, z: -19.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -7433,7 +7438,7 @@ RectTransform:
   m_GameObject: {fileID: 1553422567}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 12.153, y: 12.153, z: 12.153}
+  m_LocalScale: {x: 8.714551, y: 8.714551, z: 8.714551}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 673275667}
@@ -7445,7 +7450,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 303}
+  m_AnchoredPosition: {x: 0, y: 217.27}
   m_SizeDelta: {x: 100, y: 170.0458}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1553422569
@@ -7663,7 +7668,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1900667558241528367, guid: ad14c43e99972584bad6fd10fb768c4f, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -2.1000004
       objectReference: {fileID: 0}
     - target: {fileID: 1900667558241528367, guid: ad14c43e99972584bad6fd10fb768c4f, type: 3}
       propertyPath: m_LocalRotation.w
@@ -8192,10 +8197,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 800, y: 600}
+  m_ReferenceResolution: {x: 1080, y: 1920}
   m_ScreenMatchMode: 0
   m_MatchWidthOrHeight: 0
   m_PhysicalUnit: 3
@@ -8393,8 +8398,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _targetCanvas: {fileID: 1699418592}
-  _clickSound: {fileID: 0}
-  _audioSource: {fileID: 0}
+  _clickSound: {fileID: 8300000, guid: 45f90d1a85bc35c47bdf293ffc02a838, type: 3}
+  _audioSource: {fileID: 259133527}
 --- !u!1 &1699418589
 GameObject:
   m_ObjectHideFlags: 0
@@ -8443,10 +8448,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 800, y: 600}
+  m_ReferenceResolution: {x: 1080, y: 1920}
   m_ScreenMatchMode: 0
   m_MatchWidthOrHeight: 0
   m_PhysicalUnit: 3
@@ -9840,15 +9845,15 @@ RectTransform:
   m_GameObject: {fileID: 2074143566}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 22.293999, y: 49.45033, z: 22.293999}
+  m_LocalScale: {x: 15.986358, y: 35.459347, z: 15.986358}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1684315489}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
+  m_AnchoredPosition: {x: 0, y: -1280.4294}
+  m_SizeDelta: {x: 100, y: 172.2196}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2074143568
 MonoBehaviour:
@@ -9915,7 +9920,7 @@ RectTransform:
   m_GameObject: {fileID: 2129863144}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 22.293999, y: 49.45033, z: 22.293999}
+  m_LocalScale: {x: 15.515731, y: 34.41545, z: 15.515731}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 545291492}
