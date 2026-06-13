@@ -48,6 +48,12 @@ public class BuyPowerUpButton : MonoBehaviour
     [Tooltip("Thời gian (giây) giữ màu flash trước khi trả lại màu gốc.")]
     [SerializeField] private float _flashDuration = 0.35f;
 
+    [Header("Sound")]
+    [Tooltip("Sound to play when purchase is successful.")]
+    [SerializeField] private AudioClip _successSound;
+    [Tooltip("AudioSource to play the sound. If null, PlayClipAtPoint will be used.")]
+    [SerializeField] private AudioSource _audioSource;
+
     // ─── Private state ────────────────────────────────────────────────────────
 
     private Color _originalColor;
@@ -95,6 +101,7 @@ public class BuyPowerUpButton : MonoBehaviour
 
         Debug.Log($"[BuyPowerUpButton] Mua thành công '{powerUpId}' với giá {_cost} coin.");
         FlashColor(_successColor);
+        PlaySuccessSound();
     }
 
     // ─── Private helpers ──────────────────────────────────────────────────────
@@ -126,5 +133,13 @@ public class BuyPowerUpButton : MonoBehaviour
         yield return new WaitForSeconds(_flashDuration);
         _buttonGraphic.color = _originalColor;
         _isFlashing = false;
+    }
+
+    private void PlaySuccessSound()
+    {
+        if (_successSound != null && _audioSource != null)
+        {
+            _audioSource.PlayOneShot(_successSound);
+        }
     }
 }

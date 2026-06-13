@@ -41,6 +41,12 @@ public class DragController : MonoBehaviour
     [Tooltip("Layer mask for detecting plate colliders. Leave as 'Everything' if no dedicated layer.")]
     [SerializeField] private LayerMask _draggableLayerMask = ~0;
 
+    [Header("Audio")]
+    [SerializeField] private AudioSource _audioSource;
+    [SerializeField] private AudioClip _pickupSound;
+    [SerializeField] private AudioClip _dropSuccessSound;
+    [SerializeField] private AudioClip _dropCancelSound;
+
     // ─── Private state ────────────────────────────────────────────────────────
 
     private PlateController _draggedPlate;
@@ -120,6 +126,9 @@ public class DragController : MonoBehaviour
         _dragPlane  = new Plane(Vector3.up, new Vector3(0f, _dragHeightY, 0f));
         _isDragging = true;
 
+        if (_audioSource != null && _pickupSound != null)
+            _audioSource.PlayOneShot(_pickupSound);
+
         plate.transform.SetParent(null);
         _fsm?.ChangeState(_fsm.Dragging);
 
@@ -178,6 +187,9 @@ public class DragController : MonoBehaviour
 
         if (placed)
         {
+            if (_audioSource != null && _dropSuccessSound != null)
+                _audioSource.PlayOneShot(_dropSuccessSound);
+
             // Remove slot from hold (may trigger refill if all 4 gone).
             _holdGrid.NotifyPlateDragged(plate);
             _fsm?.ChangeState(_fsm.Playing);
@@ -203,6 +215,9 @@ public class DragController : MonoBehaviour
         _isAnimating = true;
 
         yield return StartCoroutine(SmoothMove(plate.transform, originalPos));
+
+        if (_audioSource != null && _dropCancelSound != null)
+            _audioSource.PlayOneShot(_dropCancelSound);
 
         // Re-parent so the plate is once again under HoldGridManager's transform.
         plate.transform.SetParent(originalParent);

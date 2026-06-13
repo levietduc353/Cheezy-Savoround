@@ -14,6 +14,12 @@ public class CloseButton : MonoBehaviour
     [Tooltip("Canvas sẽ bị disable khi nhấn button này.")]
     [SerializeField] private Canvas _targetCanvas;
 
+    [Header("Sound")]
+    [Tooltip("Sound to play when button is clicked.")]
+    [SerializeField] private AudioClip _clickSound;
+    [Tooltip("AudioSource to play the sound. If null, PlayClipAtPoint will be used.")]
+    [SerializeField] private AudioSource _audioSource;
+
     // ─── Public API (Button OnClick) ──────────────────────────────────────────
 
     /// <summary>
@@ -22,6 +28,8 @@ public class CloseButton : MonoBehaviour
     /// </summary>
     public void OnCloseClicked()
     {
+        PlayClickSound();
+
         if (_targetCanvas == null)
         {
             Debug.LogWarning("[CloseButton] _targetCanvas chưa được gán trong Inspector.");
@@ -31,5 +39,13 @@ public class CloseButton : MonoBehaviour
         _targetCanvas.gameObject.SetActive(false);
 
         Debug.Log($"[CloseButton] Đã disable canvas: '{_targetCanvas.name}'.");
+    }
+
+    private void PlayClickSound()
+    {
+        if (_clickSound != null && _audioSource != null)
+        {
+            _audioSource.PlayOneShot(_clickSound);
+        }
     }
 }

@@ -29,6 +29,12 @@ public class ScoreManager : MonoBehaviour
     [Tooltip("Path inside Resources/ folder (no extension).")]
     [SerializeField] private string _configPath = "Configs/score_config";
 
+    [Header("Audio")]
+    [Tooltip("Sound to play when the player levels up.")]
+    [SerializeField] private AudioClip _levelUpSound;
+    [Tooltip("AudioSource to play the level up sound.")]
+    [SerializeField] private AudioSource _audioSource;
+
     // ─── Events (Observer Pattern) ────────────────────────────────────────────
 
     /// <summary>
@@ -132,6 +138,7 @@ public class ScoreManager : MonoBehaviour
             // Increment level and notify subscribers (e.g. ScoreUI's TMP labels).
             _currentLevel++;
             OnLevelChanged?.Invoke(_currentLevel);
+            PlayLevelUpSound();
 
             // ── Coin reward: thưởng mỗi _coinRewardEveryLevels level ────────────────────
             // Dùng _lastCoinRewardLevel để đảm bảo mỗi mốc chỉ thưởng đúng 1 lần
@@ -143,7 +150,7 @@ public class ScoreManager : MonoBehaviour
                 _lastCoinRewardLevel = rewardMilestone;
                 PlayerDataManager.Instance?.AddCoin(_coinRewardAmount);
                 Debug.Log($"[ScoreManager] Level {_currentLevel} → coin reward +{_coinRewardAmount}!");
-            }
+            }    
 
             OnBarCompleted?.Invoke(_currentThreshold);
             Debug.Log($"[ScoreManager] Bar complete! Level: {_currentLevel}, New threshold: {_currentThreshold}");
@@ -191,5 +198,13 @@ public class ScoreManager : MonoBehaviour
 
         Debug.Log($"[ScoreManager] Loaded. Initial threshold: {_currentThreshold}, " +
                   $"coin reward: +{_coinRewardAmount} every {_coinRewardEveryLevels} levels.");
+    }
+
+    private void PlayLevelUpSound()
+    {
+        if (_levelUpSound != null && _audioSource != null)
+        {
+            _audioSource.PlayOneShot(_levelUpSound);
+        }
     }
 }

@@ -26,6 +26,12 @@ public class SceneLoaderButton : MonoBehaviour
     [Tooltip("Build index của scene cần load (xem trong File → Build Settings).")]
     [SerializeField] private int _sceneBuildIndex = 0;
 
+    [Header("Sound")]
+    [Tooltip("Sound to play when button is clicked.")]
+    [SerializeField] private AudioClip _clickSound;
+    [Tooltip("AudioSource to play the sound. If null, PlayClipAtPoint will be used.")]
+    [SerializeField] private AudioSource _audioSource;
+
     // ─── Public API (Button OnClick) ──────────────────────────────────────────
 
     /// <summary>
@@ -34,6 +40,21 @@ public class SceneLoaderButton : MonoBehaviour
     /// </summary>
     public void OnLoadSceneClicked()
     {
+        StartCoroutine(LoadSceneWithDelayCoroutine());
+    }
+
+    private System.Collections.IEnumerator LoadSceneWithDelayCoroutine()
+    {
+        float delay = 0f;
+        if (_clickSound != null && _audioSource != null)
+        {
+            _audioSource.PlayOneShot(_clickSound);
+            delay = _clickSound.length;
+        }
+
+        if (delay > 0f)
+            yield return new WaitForSecondsRealtime(delay);
+
         // Đảm bảo game không bị pause khi chuyển scene.
         Time.timeScale = 1f;
 
@@ -43,7 +64,7 @@ public class SceneLoaderButton : MonoBehaviour
             {
                 Debug.LogError("[SceneLoaderButton] Scene name is empty. " +
                                "Assign a valid scene name in the Inspector.");
-                return;
+                yield break;
             }
 
             Debug.Log($"[SceneLoaderButton] Loading scene by name: '{_sceneName}'.");
@@ -55,7 +76,7 @@ public class SceneLoaderButton : MonoBehaviour
             {
                 Debug.LogError($"[SceneLoaderButton] Build index {_sceneBuildIndex} is out of range. " +
                                "Check File → Build Settings.");
-                return;
+                yield break;
             }
 
             Debug.Log($"[SceneLoaderButton] Loading scene by build index: {_sceneBuildIndex}.");

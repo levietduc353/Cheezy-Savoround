@@ -14,6 +14,12 @@ public class OpenButton : MonoBehaviour
     [Tooltip("Canvas sẽ được enable khi nhấn button này.")]
     [SerializeField] private Canvas _targetCanvas;
 
+    [Header("Sound")]
+    [Tooltip("Sound to play when button is clicked.")]
+    [SerializeField] private AudioClip _clickSound;
+    [Tooltip("AudioSource to play the sound. If null, PlayClipAtPoint will be used.")]
+    [SerializeField] private AudioSource _audioSource;
+
     // ─── Public API (Button OnClick) ──────────────────────────────────────────
 
     /// <summary>
@@ -22,6 +28,8 @@ public class OpenButton : MonoBehaviour
     /// </summary>
     public void OnOpenClicked()
     {
+        PlayClickSound();
+
         if (_targetCanvas == null)
         {
             Debug.LogWarning("[OpenButton] _targetCanvas chưa được gán trong Inspector.");
@@ -31,5 +39,13 @@ public class OpenButton : MonoBehaviour
         _targetCanvas.gameObject.SetActive(true);
 
         Debug.Log($"[OpenButton] Đã enable canvas: '{_targetCanvas.name}'.");
+    }
+
+    private void PlayClickSound()
+    {
+        if (_clickSound != null && _audioSource != null)
+        {
+            _audioSource.PlayOneShot(_clickSound);
+        }
     }
 }

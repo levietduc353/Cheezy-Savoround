@@ -50,6 +50,17 @@ public class MergeAnimator : MonoBehaviour
     [Tooltip("Duration of the shrink-to-zero phase after the punch.")]
     [SerializeField] private float _dismissShrinkDuration = 0.25f;
 
+    [Header("Audio")]
+    [SerializeField] private AudioSource _audioSource;
+    [SerializeField] private AudioClip _sliceArrivedSound;
+    [SerializeField] private AudioClip _plateCompletedSound;
+    [SerializeField] private AudioClip _plateRemovedSound;
+    [Tooltip("Sound played when a donor plate becomes empty after merging and disappears.")]
+    [SerializeField] private AudioClip _plateEmptySound;
+    
+    [Tooltip("How many seconds before the slice arrives should the sound play? Increase this if the sound feels 'late'.")]
+    [SerializeField] private float _sliceArrivedSoundAnticipation = 0.1f;
+
     // ─── Events (Observer Pattern) ────────────────────────────────────────────
 
     /// <summary>
@@ -177,6 +188,9 @@ public class MergeAnimator : MonoBehaviour
         IsMergeAnimating = true;
         fsm?.ChangeState(fsm.Clearing);
 
+        if (_audioSource != null && _plateRemovedSound != null)
+            _audioSource.PlayOneShot(_plateRemovedSound);
+
         // Free the grid cell immediately so other logic can use it right away.
         mainGrid.RemovePlate(plate.GridRow, plate.GridCol);
 
@@ -250,6 +264,9 @@ public class MergeAnimator : MonoBehaviour
         // Receiver became full → remove from grid, notify score system, then animate dismiss.
         if (op.receiver.IsFull)
         {
+            if (_audioSource != null && _plateCompletedSound != null)
+                _audioSource.PlayOneShot(_plateCompletedSound);
+
             mainGrid.RemovePlate(op.receiverRow, op.receiverCol);
 
             // Notify ScoreManager (and any other subscribers) that a plate was completed.
@@ -268,6 +285,9 @@ public class MergeAnimator : MonoBehaviour
         // Donor became empty → remove from grid, then animate dismiss.
         if (op.donor.gameObject.activeInHierarchy && op.donor.IsEmpty)
         {
+            if (_audioSource != null && _plateEmptySound != null)
+                _audioSource.PlayOneShot(_plateEmptySound);
+
             mainGrid.RemovePlate(op.donorRow, op.donorCol);
             bool done = false;
             StartCoroutine(PlateDismissCoroutine(op.donor, () =>
@@ -307,11 +327,22 @@ public class MergeAnimator : MonoBehaviour
         slice.transform.position = fromPos;
 
         float elapsed = 0f;
+        bool soundPlayed = false;
+        
         while (elapsed < _sliceTravelDuration)
         {
             if (slice == null) break; // safety
 
             elapsed += Time.deltaTime;
+            
+            // Phát âm thanh trước khi đến đích một chút
+            if (!soundPlayed && elapsed >= _sliceTravelDuration - _sliceArrivedSoundAnticipation)
+            {
+                if (_audioSource != null && _sliceArrivedSound != null)
+                    _audioSource.PlayOneShot(_sliceArrivedSound);
+                soundPlayed = true;
+            }
+
             float t       = Mathf.Clamp01(elapsed / _sliceTravelDuration);
             float smoothT = Mathf.SmoothStep(0f, 1f, t);
 
@@ -321,6 +352,12 @@ public class MergeAnimator : MonoBehaviour
             slice.transform.position = pos;
 
             yield return null;
+        }
+
+        if (!soundPlayed)
+        {
+            if (_audioSource != null && _sliceArrivedSound != null)
+                _audioSource.PlayOneShot(_sliceArrivedSound);
         }
 
         if (slice != null)
