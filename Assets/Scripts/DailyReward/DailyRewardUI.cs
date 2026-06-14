@@ -46,6 +46,10 @@ public class DailyRewardUI : MonoBehaviour
     [Tooltip("7 DailyRewardSlot tương ứng Day 1–7. Index 0 = Day 1, index 6 = Day 7.")]
     [SerializeField] private DailyRewardSlot[] _slots;
 
+    [Header("Audio")]
+    [SerializeField] private AudioClip _clickSound;
+    [SerializeField] private AudioSource _audioSource;
+
     // ─── Private state ─────────────────────────────────────────────────────────
 
     /// <summary>
@@ -102,6 +106,10 @@ public class DailyRewardUI : MonoBehaviour
     /// </summary>
     public void OnClaimButtonClicked()
     {
+        if (_clickSound != null && _audioSource != null)
+        {
+            _audioSource.PlayOneShot(_clickSound);
+        }
         DailyRewardManager.Instance?.ClaimTodayReward();
     }
 

@@ -132,7 +132,15 @@ public class PlayerDataUI : MonoBehaviour
     private void UpdateCoin(int newCoin)
     {
         if (_coinText != null)
-            _coinText.text = newCoin.ToString();
+        {
+            AnimatedNumberText animText = _coinText.GetComponent<AnimatedNumberText>();
+            if (animText == null) animText = _coinText.gameObject.AddComponent<AnimatedNumberText>();
+            
+            // AnimatedNumberText sẽ tự check:
+            // Nếu là lần gọi đầu tiên (khi mở game), nó sẽ gán ngay (không có hiệu ứng).
+            // Ở các lần nhận coin sau, nó sẽ tự động chạy hiệu ứng đếm số trong 0.5s
+            animText.SetTargetValue(newCoin, 0.5f);
+        }
     }
 
     /// <summary>

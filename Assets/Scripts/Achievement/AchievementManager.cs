@@ -36,6 +36,10 @@ public class AchievementManager : MonoBehaviour
     [Tooltip("Path inside Resources/ folder (no extension).")]
     [SerializeField] private string _configPath = "Configs/achievement_config";
 
+    [Header("Audio")]
+    [SerializeField] private AudioClip _clickSound;
+    [SerializeField] private AudioSource _audioSource;
+
     // ─── Events (Observer Pattern) ────────────────────────────────────────────
 
     /// <summary>
@@ -143,6 +147,11 @@ public class AchievementManager : MonoBehaviour
     /// </summary>
     public void ClaimAllRewards()
     {
+        if (_clickSound != null && _audioSource != null)
+        {
+            _audioSource.PlayOneShot(_clickSound);
+        }
+
         if (_config?.achievements == null || PlayerDataManager.Instance == null) return;
 
         bool hasClaimedAnything = false;

@@ -149,6 +149,13 @@ public class ScoreManager : MonoBehaviour
             {
                 _lastCoinRewardLevel = rewardMilestone;
                 PlayerDataManager.Instance?.AddCoin(_coinRewardAmount);
+                
+                // Gọi hiệu ứng bay coin thủ công ở PlayScene
+                if (CoinAnimationController.Instance != null)
+                {
+                    CoinAnimationController.Instance.PlayCoinAnimation();
+                }
+
                 Debug.Log($"[ScoreManager] Level {_currentLevel} → coin reward +{_coinRewardAmount}!");
             }    
 

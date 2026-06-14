@@ -52,6 +52,9 @@ public class GameOverManager : MonoBehaviour
     [Tooltip("Sound played when the game is over.")]
     [SerializeField] private AudioClip _gameOverSound;
 
+    [Tooltip("AudioSource of another object to stop when game over happens (e.g., Background Music).")]
+    [SerializeField] private AudioSource _audioToStopOnGameOver;
+
     [Header("Animation")]
     [Tooltip("Panel chính để tạo hiệu ứng trượt. Nếu null, sẽ cố tìm object con đầu tiên trong Canvas.")]
     [SerializeField] private RectTransform _gameOverPanel;
@@ -199,9 +202,12 @@ public class GameOverManager : MonoBehaviour
     ///   4. Enable Game Over Canvas.
     ///   5. Điền điểm và highest score vào TMP.
     /// </summary>
-    private void TriggerGameOver()
+    public void TriggerGameOver()
     {
         _gameOverTriggered = true;
+
+        if (_audioToStopOnGameOver != null)
+            _audioToStopOnGameOver.Stop();
 
         if (_audioSource != null && _gameOverSound != null)
             _audioSource.PlayOneShot(_gameOverSound);
@@ -235,14 +241,25 @@ public class GameOverManager : MonoBehaviour
             StartCoroutine(DropPanelCoroutine());
         }
 
-        // Ghi điểm hiện tại vào TMP.
+        // Ghi điểm hiện tại vào TMP (bắt đầu từ 0 và nhảy số lên).
         if (_scoreText != null)
-            _scoreText.text = totalScore.ToString();
+        {
+            AnimatedNumberText animText = _scoreText.GetComponent<AnimatedNumberText>();
+            if (animText == null) animText = _scoreText.gameObject.AddComponent<AnimatedNumberText>();
+            
+            animText.SetTargetValue(0, 0f, true); // Gán cứng bằng 0
+            animText.SetTargetValue(totalScore, 1.5f); // Nhảy lên điểm thật trong 1.5s
+        }
 
-        // Ghi highest score vào TMP — lấy sau khi đã gọi UpdateHighestScore
-        // nên giá trị phản ánh đúng kỷ lục mới nhất.
+        // Ghi highest score vào TMP.
         if (_highestScoreText != null && PlayerDataManager.Instance != null)
-            _highestScoreText.text = PlayerDataManager.Instance.HighestScore.ToString();
+        {
+            AnimatedNumberText animText = _highestScoreText.GetComponent<AnimatedNumberText>();
+            if (animText == null) animText = _highestScoreText.gameObject.AddComponent<AnimatedNumberText>();
+
+            animText.SetTargetValue(0, 0f, true);
+            animText.SetTargetValue(PlayerDataManager.Instance.HighestScore, 1.5f);
+        }
 
         Debug.Log($"[GameOverManager] Game Over! Total plates completed: {totalScore}");
     }
